@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
@@ -18,7 +19,8 @@ class StoryDraft(BaseModel):
     @field_validator("title", mode="before")
     @classmethod
     def trim_title(cls, value: object) -> object:
-        return value.strip() if isinstance(value, str) else value
+        # Match browser whitespace plus Python's separators; BOM is padding at the edges.
+        return re.sub(r"^[\s\ufeff]+|[\s\ufeff]+$", "", value) if isinstance(value, str) else value
 
 
 class StoryChange(BaseModel):

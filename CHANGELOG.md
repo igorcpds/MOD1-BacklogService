@@ -11,3 +11,4 @@ Versão candidata SemVer: `0.1.0`, definida em `pyproject.toml`. Sem tag/release
 - Health, CORS, erros sanitizados e respostas protegidas sem cache.
 - Testes de domínio, segurança, HTTP, distribuição e PostgreSQL opt-in.
 - Instalação reproduzível e evidências do fluxo integrado.
+- Normalização de espaços Unicode no título alinhada ao formulário do frontend.

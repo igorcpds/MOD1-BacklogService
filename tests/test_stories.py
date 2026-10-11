@@ -11,6 +11,23 @@ from backlog_service.repository import StoryRepository
 from backlog_service.service import StoriesService
 
 
+@pytest.mark.parametrize(
+    "padding", ["\ufeff", "\ufeff\u0085", "\u001c\ufeff\u001f", "\u00a0\ufeff \u2028"]
+)
+def test_title_normalization_matches_browser_unicode(service, project_id, actor_id, padding):
+    story = service.create(project_id, actor_id, StoryDraft(title=padding + "História" + padding))
+    assert story.title == "História"
+    assert service.list(project_id).items[0].title == "História"
+
+
+@pytest.mark.parametrize(
+    "title", ["\ufeff", "\ufeff\u0085", "\u001c\ufeff\u001f", "\u00a0\ufeff \u2028"]
+)
+def test_title_cannot_contain_only_unicode_padding(title):
+    with pytest.raises(ValidationError):
+        StoryDraft(title=title)
+
+
 def test_create_defaults_and_server_fields(service, project_id, actor_id):
     story = service.create(project_id, actor_id, StoryDraft(title="  História  "))
     assert (story.title, story.priority, story.status) == ("História", "medium", "todo")

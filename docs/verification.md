@@ -5,10 +5,10 @@ Python 3.12.15. Este recorte pode ser demonstrado localmente.
 
 | Verificação | Resultado |
 | --- | --- |
-| Backend: pytest | 110 aprovados, 1 skip PostgreSQL local opt-in |
+| Backend: pytest | 118 aprovados, 1 skip PostgreSQL local opt-in |
 | Ruff, formatação, mypy, lock | Aprovados |
 | Wheel/sdist reais | Construídos; arquivos privados excluídos em regressão |
-| Frontend com três backends temporários | 59 testes aprovados, sem skips |
+| Frontend com três backends temporários | 63 testes aprovados, sem skips |
 | Cadastro → projeto → histórias → prioridade/status | API real e navegador aprovados |
 | Reinício do backlog | Dados recuperados na integração SQLite e no Neon |
 | Outra conta/projeto errado | 404; todas as rotas protegidas; sem token: 401 |
@@ -29,7 +29,13 @@ Há um aviso de depreciação do adaptador HTTPX no TestClient; não é falha de
 Instalação reproduzida em quatro árvores novas contendo somente arquivos públicos,
 sem `.env`, chaves, bancos, instruções locais ou planos. Identidade/projetos/backlog
 instalaram seus pacotes em ambientes Python 3.12 novos; o backlog repetiu análise
-estática, 110 testes aprovados/um skip e build wheel/sdist nesse ambiente.
+estática, 118 testes aprovados/um skip e build wheel/sdist nesse ambiente.
+
+A revisão final corrigiu a diferença entre os espaços Unicode aceitos pelo
+backend e pelo formulário. O frontend também preserva a confirmação de criação
+ou atualização quando a consulta seguinte retorna 401 e encerra a sessão.
+Esses casos têm testes de regressão; histórias antigas com espaços adicionais
+continuam legíveis, sem alteração dos registros existentes.
 
 ## Reproduzir
 

@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Arquivos locais de trabalho e instruções (nunca publicar)
+.superpowers/
+superpowers/
+AGENTS.md
+agents.md
+.local/
+.worktrees/
+.env.*
+!.env.example
+keys/
+*.pem
+*.sqlite*
+*.db

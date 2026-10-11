@@ -22,6 +22,15 @@ backlog-service = "backlog_service.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/backlog_service"]
 
+[tool.hatch.build]
+exclude = ["**/AGENTS.md", "**/agents.md", "**/.env*", "**/keys/**", "**/*.pem", "**/*.db", "**/*.sqlite*", "**/.local/**", "**/.superpowers/**", "**/superpowers/**", "**/.worktrees/**", "**/__pycache__/**", "**/*.pyc"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/docs/integration.md", "/docs/database-neon.md", "/docs/verification.md", "/README.md", "/CHANGELOG.md", "/pyproject.toml", "/uv.lock", "/.python-version", "/.gitignore"]
+
+[tool.hatch.build.targets.sdist.force-include]
+".env.example" = ".env.example"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

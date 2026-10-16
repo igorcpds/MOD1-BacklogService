@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!uv.lock
+!src/
+!src/backlog_service/
+!src/backlog_service/*.py
+!Dockerfile

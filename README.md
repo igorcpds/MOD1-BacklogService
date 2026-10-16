@@ -37,6 +37,8 @@ e execute `init`. É uma alternativa de desenvolvimento; testes usam bancos temp
 
 ## Iniciar
 
+Publicação com Neon e Azure Container Apps: [configuração, imagem e deploy](docs/deploy-azure.md). O workflow de publicação é manual e separado dos checks de PR.
+
 ```powershell
 .venv/Scripts/python.exe -m uvicorn backlog_service.app:create_app --factory --host 127.0.0.1 --port 8002
 ```

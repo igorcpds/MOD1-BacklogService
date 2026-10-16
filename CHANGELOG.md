@@ -4,6 +4,8 @@ Versão candidata SemVer: `0.1.0`, definida em `pyproject.toml`. Sem tag/release
 
 ## Unreleased — 0.1.0
 
+- Dockerfile sem privilégios, checks de container e workflow manual Azure/OIDC por digest, com documentação Neon e rollback.
+
 - Histórias persistentes, descrição, critérios de aceite, prioridades e progresso.
 - Criação, consulta, paginação e atualização de prioridade/status.
 - JWT RS256/JWKS e confirmação de acesso pela API de projetos a cada operação.

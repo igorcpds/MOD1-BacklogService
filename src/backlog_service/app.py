@@ -37,7 +37,7 @@ def create_app(
             if client is not None:
                 client.close()
 
-    app = FastAPI(title="Backlog — MVP", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Módulo 1 — Backlog", version="0.1.0", lifespan=lifespan)
     app.state.engine = engine
     app.state.verifier = verifier or TokenVerifier(settings)
     app.state.project_access = project_access

@@ -36,6 +36,16 @@ da busca. Texto vazio só desativa a busca; os filtros continuam ativos.
 Os filtros combinam AND e são aplicados antes de calcular `total`, `limit` e `offset`,
 preservando a ordenação. Exemplo: `?q=entrega&status=done&priority=high&limit=20`.
 
+No PostgreSQL, a conversão de maiúsculas segue o locale/collation do banco;
+UTF-8 sozinho não garante busca sem distinção de caixa fora de ASCII.
+O banco precisa converter `ÁRVORE` para `árvore`, por exemplo. O locale libc
+`C`/`POSIX` não atende esse requisito. Para desenvolvimento descartável, ICU
+`und` é uma opção quando disponível. Locales com regras específicas de idioma
+podem divergir da conversão Unicode do termo de busca feita pelo Python.
+Confira o banco conforme [database-neon.md](database-neon.md#busca-unicode).
+A aplicação não muda collations nem configura o banco no startup. O SQLite
+local registra `lower` Unicode por conexão, sem alterar schema.
+
 ## Acesso
 
 RS256, `typ=JWT`, `kid`, issuer/audience configurados, `iat`/`exp` inteiros,

@@ -1,5 +1,23 @@
 # Validação do backlog
 
+## Conferência integrada concluída — 28/10/2026
+
+- Suíte completa com PostgreSQL 16.15 **ICU/und e UTF-8** descartável em loopback:
+  **149 passaram, nenhum skip**, em 51,19 s. Um aviso de depreciação HTTPX já
+  existente não representa falha de teste.
+- A rodada anterior com locale libc `C` teve **148 aprovados e uma falha** na busca
+  ÁRVORE/árvore: esse locale converte somente ASCII. Os testes de acentos foram
+  mantidos; a configuração Unicode suportada passou. Esta é uma condição do
+  ambiente que deve ser conferida antes de publicar, documentada em
+  [database-neon.md](database-neon.md) e [integration.md](integration.md).
+- Frontend 0.3.0: **85 testes aprovados sem skips**, incluindo edição, filtros,
+  persistência após reinício e isolamento com três APIs reais e SQLite temporário.
+- Revisão independente dos backends sem achados críticos/importantes. A interface
+  preserva rascunhos se atualizar a lista falhar, com regressão RED→GREEN.
+- Banco temporário encerrado/removido. Nenhum acesso ao Neon, grant, deploy ou
+  alteração de main. As consultas de diagnóstico de locale documentadas não foram
+  executadas contra o ambiente publicado.
+
 ## Refinamento 0.2.0 — 28/10/2026, local
 
 Worktree `us-backlog-refinement`, branch `feat/us-backlog-refinement`, Python 3.12.13

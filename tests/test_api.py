@@ -13,14 +13,16 @@ from backlog_service.security import SigningKeysUnavailable
 
 
 @pytest.fixture
-def client(issuer, project_id):
+def client(issuer, project_id, access_payload):
     state = {"status": 200, "calls": []}
 
     def projects(request):
         state["calls"].append(request)
         return httpx.Response(
             state["status"],
-            json={"id": request.url.path.rsplit("/", 1)[-1], "owner_id": str(issuer["owner"])},
+            json=state.get(
+                "payload", access_payload(request.url.path.split("/")[-2], issuer["owner"])
+            ),
         )
 
     upstream = httpx.Client(transport=httpx.MockTransport(projects))
@@ -94,7 +96,7 @@ def test_text_edit_and_filtered_list_reauthorize_each_request(client, issuer, pr
     assert len(calls) == 9
     assert all(request.method == "GET" for request in calls)
     assert all(request.headers["authorization"] == auth["Authorization"] for request in calls)
-    assert all(request.url.path == f"/projects/{project_id}" for request in calls)
+    assert all(request.url.path == f"/projects/{project_id}/access" for request in calls)
 
 
 @pytest.mark.parametrize("query", [{"q": "x" * 201}, {"status": "closed"}, {"priority": "urgent"}])
@@ -236,3 +238,132 @@ def test_database_and_jwks_failure_recovery(client, issuer, project_id, monkeypa
     monkeypatch.setattr(client.app.state.verifier, "verify", unavailable)
     assert client.get(url, headers=headers(issuer)).status_code == 503
     assert client.get("/health/live").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "roles,post_status,text_status",
+    [
+        (["owner"], 201, 200),
+        (["developer"], 403, 403),
+        (["product_owner"], 201, 200),
+        (["project_manager"], 201, 200),
+        (["developer", "product_owner"], 201, 200),
+        (["developer", "project_manager"], 201, 200),
+        (["developer", "product_owner", "project_manager"], 201, 200),
+    ],
+)
+def test_role_permissions_control_each_operation(
+    client, issuer, project_id, access_payload, roles, post_status, text_status
+):
+    auth = headers(issuer)
+    url = f"/projects/{project_id}/stories"
+    story = client.post(url, json={"title": "Original"}, headers=auth).json()
+    detail = f"{url}/{story['id']}"
+    client.app.state.test_projects["payload"] = access_payload(
+        project_id, issuer["owner"], roles=roles
+    )
+    assert client.get(url, headers=auth).status_code == 200
+    assert client.get(detail, headers=auth).status_code == 200
+    assert client.post(url, json={"title": "New"}, headers=auth).status_code == post_status
+    status = client.patch(detail, json={"status": "done"}, headers=auth)
+    assert status.status_code == 200
+    assert status.json()["status"] == "done"
+    for change in [
+        {"title": "Changed"},
+        {"description": "Changed"},
+        {"acceptance_criteria": "Changed"},
+        {"priority": "high"},
+        {"status": "todo", "title": "Changed"},
+        {"status": "done", "description": ""},
+    ]:
+        response = client.patch(detail, json=change, headers=auth)
+        assert response.status_code == text_status
+        if text_status == 403:
+            assert response.json() == {"detail": "Insufficient project permissions"}
+            assert "www-authenticate" not in response.headers
+
+
+@pytest.mark.parametrize(
+    "method,suffix,data",
+    [
+        ("POST", "", {"title": "Denied"}),
+        ("PATCH", "/11111111-1111-4111-8111-111111111111", {"title": "Denied"}),
+        ("PATCH", "/11111111-1111-4111-8111-111111111111", {"priority": "high"}),
+        (
+            "PATCH",
+            "/11111111-1111-4111-8111-111111111111",
+            {"status": "done", "acceptance_criteria": "Denied"},
+        ),
+    ],
+)
+def test_forbidden_action_never_executes_sql(
+    client, issuer, project_id, access_payload, method, suffix, data
+):
+    client.app.state.test_projects["payload"] = access_payload(
+        project_id, issuer["owner"], roles=["developer"]
+    )
+    statements = []
+    event.listen(
+        client.app.state.engine,
+        "before_cursor_execute",
+        lambda c, cur, sql, p, ctx, many: statements.append(sql),
+    )
+    response = client.request(
+        method,
+        f"/projects/{project_id}/stories{suffix}",
+        json=data,
+        headers={**headers(issuer), "Origin": "http://127.0.0.1:5173"},
+    )
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Insufficient project permissions"}
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+    assert "www-authenticate" not in response.headers
+    assert statements == []
+
+
+@pytest.mark.parametrize("reason", ["revoked", "expired"])
+def test_fresh_lookup_revokes_every_next_operation(client, issuer, project_id, reason):
+    # Projects owns expiry and membership state, returning the same 404 for either cause.
+    state = client.app.state.test_projects
+    auth = headers(issuer)
+    url = f"/projects/{project_id}/stories"
+    story = client.post(url, json={"title": reason}, headers=auth).json()
+    assert client.get(url, headers=auth).status_code == 200
+    state["status"] = 404
+    statements = []
+    event.listen(
+        client.app.state.engine,
+        "before_cursor_execute",
+        lambda c, cur, sql, p, ctx, many: statements.append(sql),
+    )
+    for method, route, data in [
+        ("GET", url, None),
+        ("GET", f"{url}/{story['id']}", None),
+        ("POST", url, {"title": "Denied"}),
+        ("PATCH", f"{url}/{story['id']}", {"status": "done"}),
+        ("PATCH", f"{url}/{story['id']}", {"title": "Denied"}),
+    ]:
+        response = client.request(method, route, headers=auth, json=data)
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Project unavailable"}
+    assert len(state["calls"]) == 7
+    assert all(r.headers["authorization"] == auth["Authorization"] for r in state["calls"])
+    assert statements == []
+
+
+def test_role_downgrade_is_effective_on_next_write(client, issuer, project_id, access_payload):
+    auth = headers(issuer)
+    url = f"/projects/{project_id}/stories"
+    story = client.post(url, json={"title": "Original"}, headers=auth).json()
+    state = client.app.state.test_projects
+    state["payload"] = access_payload(project_id, issuer["owner"], roles=["developer"])
+    assert client.post(url, json={"title": "Denied"}, headers=auth).status_code == 403
+    assert (
+        client.patch(f"{url}/{story['id']}", json={"title": "Denied"}, headers=auth).status_code
+        == 403
+    )
+    response = client.patch(f"{url}/{story['id']}", json={"status": "done"}, headers=auth)
+    assert response.status_code == 200
+    assert response.json()["title"] == "Original"
+    assert response.json()["status"] == "done"

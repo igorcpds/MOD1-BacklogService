@@ -1,4 +1,4 @@
-# Contrato — backlog 0.2.0
+# Contrato — backlog 0.3.0
 
 | Método | Rota | Resultado |
 | --- | --- | --- |
@@ -53,15 +53,22 @@ RS256, `typ=JWT`, `kid`, issuer/audience configurados, `iat`/`exp` inteiros,
 refresh mínimo 30 s inclusive falhas. Um kid novo pode aguardar esse intervalo;
 chaves conhecidas em cache não esperam rede. Não há revogação imediata.
 
-Cada operação confirma acesso por GET `/projects/{project_id}` na API configurada,
+Cada operação confirma acesso por GET `/projects/{project_id}/access` na API configurada,
 com o mesmo Bearer, timeout 5 s, sem retry/redirect/cache de autorização.
-UUID do projeto e proprietário precisam coincidir com rota e JWT. Nenhuma história
-é consultada/gravada antes disso. Sem FK/join/leitura de outros módulos;
+Exige Projetos 0.4.0 e seu contrato canônico de project_id/user_id/is_owner/roles/permissions.
+IDs precisam coincidir com rota/JWT; papéis e permissões devem ser únicos, conhecidos
+e coerentes com a matriz fixa. Payload antigo de proprietário é recusado com 503.
+GET exige backlog:read; POST backlog:create; PATCH somente status exige
+backlog:update_status; qualquer outro campo exige backlog:update. Negação resulta
+em 403 sem consultar/gravar histórias. Remover/expirar papel afeta novas verificações;
+operação já autorizada pode terminar porque não existe transação distribuída.
+Sem FK/join/leitura de outros módulos;
 `created_by` registra autoria, não autorização.
 
 | Status | Significado |
 | --- | --- |
 | 401 | Token ausente/inválido ou rejeitado por projetos; `WWW-Authenticate: Bearer` |
+| 403 | Projeto legível, mas ação sem permissão; manter a sessão e atualizar acessos |
 | 404 | Projeto ausente/alheio, história ausente ou de outro projeto; mesma mensagem |
 | 422 | Entrada, busca, enum ou paginação inválida, sem repetir valores |
 | 503 | Banco/JWKS/projetos indisponíveis ou inconsistentes; mensagem genérica |

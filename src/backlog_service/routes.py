@@ -38,6 +38,11 @@ class Principal:
 class ProjectContext:
     project_id: UUID
     actor_id: UUID
+    permissions: frozenset[str]
+
+    def require(self, permission: str) -> None:
+        if permission not in self.permissions:
+            raise HTTPException(403, "Insufficient project permissions")
 
 
 def unauthorized() -> HTTPException:
@@ -62,7 +67,7 @@ def authorized_project(
     project_id: UUID, request: Request, principal: Annotated[Principal, Depends(current_principal)]
 ) -> ProjectContext:
     try:
-        request.app.state.project_access.require_access(
+        permissions = request.app.state.project_access.require_access(
             project_id, principal.actor_id, principal.token
         )
     except ProjectUnavailable:
@@ -71,7 +76,7 @@ def authorized_project(
         raise unauthorized() from None
     except ProjectsUnavailable:
         raise HTTPException(503, "Service temporarily unavailable") from None
-    return ProjectContext(project_id, principal.actor_id)
+    return ProjectContext(project_id, principal.actor_id, permissions)
 
 
 Context = Annotated[ProjectContext, Depends(authorized_project)]
@@ -87,6 +92,7 @@ Service = Annotated[StoriesService, Depends(story_service)]
 
 @router.post("/projects/{project_id}/stories", response_model=Story, status_code=201)
 def create_story(draft: StoryDraft, context: Context, service: Service) -> Story:
+    context.require("backlog:create")
     return service.create(context.project_id, context.actor_id, draft)
 
 
@@ -100,6 +106,7 @@ def list_stories(
     status: Status | None = None,
     priority: Priority | None = None,
 ) -> StoryPage:
+    context.require("backlog:read")
     return service.list(
         context.project_id, limit=limit, offset=offset, q=q, status=status, priority=priority
     )
@@ -107,6 +114,7 @@ def list_stories(
 
 @router.get("/projects/{project_id}/stories/{story_id}", response_model=Story)
 def get_story(story_id: UUID, context: Context, service: Service) -> Story:
+    context.require("backlog:read")
     story = service.get(context.project_id, story_id)
     if story is None:
         raise HTTPException(404, "Project unavailable")
@@ -115,6 +123,9 @@ def get_story(story_id: UUID, context: Context, service: Service) -> Story:
 
 @router.patch("/projects/{project_id}/stories/{story_id}", response_model=Story)
 def update_story(story_id: UUID, change: StoryChange, context: Context, service: Service) -> Story:
+    context.require(
+        "backlog:update_status" if change.model_fields_set == {"status"} else "backlog:update"
+    )
     story = service.update(context.project_id, story_id, change)
     if story is None:
         raise HTTPException(404, "Project unavailable")

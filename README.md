@@ -1,6 +1,14 @@
 # MOD1 Backlog Service
 
-MVP `0.2.0` de histórias por projeto: registrar necessidades e critérios de aceite,
+## Autorização por ação — candidato 0.3.0
+
+Exige Projetos 0.4.0: cada operação consulta `/projects/{id}/access` com o mesmo
+Bearer e valida a matriz canônica. Desenvolvedor consulta e atualiza somente
+status; PO/PM também criam/refinam histórias. 403 mantém a sessão, revogação e
+expiração afetam novas verificações. Sem mudança de schema no Backlog.
+[Contrato de integração](docs/integration.md).
+
+MVP `0.3.0` de histórias por projeto: registrar necessidades e critérios de aceite,
 priorizar entregas e acompanhar o progresso. O usuário entra pelo serviço de
 identidade e acessa apenas projetos autorizados pelo serviço de projetos.
 
@@ -60,7 +68,7 @@ Contratos: [integration.md](docs/integration.md).
 
 Entre → crie/abra um projeto → **Backlog** → descreva uma história e seus critérios
 de aceite → defina a prioridade → marque o progresso → reinicie o backlog e
-reencontre a entrega. Outra conta não acessa as histórias da primeira.
+reencontre a entrega. Outra conta só acessa as histórias mediante vínculo ativo e permissão no projeto.
 O usuário transforma necessidades em entregas ordenadas e verifica o que concluiu.
 Resultados: [verification.md](docs/verification.md).
 

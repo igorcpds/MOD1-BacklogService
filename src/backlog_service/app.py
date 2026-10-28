@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 
 import httpx
 from fastapi import FastAPI, Request
@@ -37,7 +38,7 @@ def create_app(
             if client is not None:
                 client.close()
 
-    app = FastAPI(title="Módulo 1 — Backlog", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Módulo 1 — Backlog", version=version("backlog-service"), lifespan=lifespan)
     app.state.engine = engine
     app.state.verifier = verifier or TokenVerifier(settings)
     app.state.project_access = project_access

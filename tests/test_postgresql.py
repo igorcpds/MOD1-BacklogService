@@ -28,13 +28,32 @@ def test_disposable_postgresql_persistence_and_project_isolation():
             service = StoriesService(StoryRepository(session))
             story = service.create(a, actor, StoryDraft(title="Entrega"))
             service.create(b, actor, StoryDraft(title="Outro projeto"))
-            service.update(a, story.id, StoryChange(priority="high", status="done"))
+            updated = service.update(
+                a,
+                story.id,
+                StoryChange(
+                    title=" Entrega ÁRVORE ",
+                    description="100% a_b!",
+                    acceptance_criteria="Critério\nverificável",
+                    priority="high",
+                    status="done",
+                ),
+            )
+            service.create(a, actor, StoryDraft(title="Entrega 100x axb"))
         engine.dispose()
         with Session(engine) as session:
             repository = StoryRepository(session)
-            page = repository.list_for_project(a, limit=20, offset=0)
+            page = repository.list_for_project(
+                a, limit=20, offset=0, q="árvore", priority="high", status="done"
+            )
             assert page.total == 1 and page.items[0].id == story.id
             assert (page.items[0].priority, page.items[0].status) == ("high", "done")
+            assert page.items[0] == updated
+            service = StoriesService(repository)
+            assert service.list(a, q="100%", priority="high", status="done").total == 1
+            assert service.list(a, q="a_b!").total == 1
+            assert service.list(a, q=str(story.id).upper()).items == [updated]
+            assert service.list(a, q="entrega", limit=1, offset=1).total == 2
             assert repository.get_for_project(b, story.id) is None
     finally:
         with engine.begin() as connection:

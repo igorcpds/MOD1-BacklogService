@@ -67,6 +67,54 @@ def test_story_flow(client, issuer, project_id):
     )
 
 
+def test_text_edit_and_filtered_list_reauthorize_each_request(client, issuer, project_id):
+    url = f"/projects/{project_id}/stories"
+    auth = headers(issuer)
+    story = client.post(url, json={"title": "Inicial"}, headers=auth).json()
+    changed = client.patch(
+        f"{url}/{story['id']}",
+        headers=auth,
+        json={"title": " Nova história ", "description": "100% ÁRVORE", "status": "done"},
+    )
+    assert changed.status_code == 200
+    assert changed.json()["title"] == "Nova história"
+    for query, total in [
+        ({"q": " árvore ", "status": "done", "priority": "medium"}, 1),
+        ({"q": story["id"].upper()}, 1),
+        ({"q": "100_"}, 0),
+        ({"q": " " + "x" * 200 + " "}, 0),
+        ({"q": "\ufeff"}, 1),
+        ({"status": "todo"}, 0),
+        ({"priority": "high"}, 0),
+    ]:
+        response = client.get(url, params=query, headers=auth)
+        assert response.status_code == 200
+        assert response.json()["total"] == total
+    calls = client.app.state.test_projects["calls"]
+    assert len(calls) == 9
+    assert all(request.method == "GET" for request in calls)
+    assert all(request.headers["authorization"] == auth["Authorization"] for request in calls)
+    assert all(request.url.path == f"/projects/{project_id}" for request in calls)
+
+
+@pytest.mark.parametrize("query", [{"q": "x" * 201}, {"status": "closed"}, {"priority": "urgent"}])
+def test_invalid_search_is_sanitized(client, issuer, project_id, query):
+    response = client.get(f"/projects/{project_id}/stories", params=query, headers=headers(issuer))
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Invalid story input"}
+
+
+@pytest.mark.parametrize("field", ["id", "project_id", "created_by", "created_at", "updated_at"])
+def test_patch_immutable_fields_rejected_with_text(client, issuer, project_id, field):
+    response = client.patch(
+        f"/projects/{project_id}/stories/{uuid4()}",
+        json={"title": "Allowed", field: "private"},
+        headers=headers(issuer),
+    )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Invalid story input"}
+
+
 @pytest.mark.parametrize("status,expected", [(404, 404), (401, 401), (503, 503), (302, 503)])
 def test_denied_project_never_reads_or_writes_database(
     client, issuer, project_id, status, expected
@@ -81,9 +129,11 @@ def test_denied_project_never_reads_or_writes_database(
     url = f"/projects/{project_id}/stories"
     for method, route, data in [
         ("GET", url, None),
+        ("GET", url + "?q=literal%25&status=done&priority=high", None),
         ("POST", url, {"title": "A"}),
         ("GET", f"{url}/{uuid4()}", None),
         ("PATCH", f"{url}/{uuid4()}", {"status": "done"}),
+        ("PATCH", f"{url}/{uuid4()}", {"title": "Texto", "description": ""}),
     ]:
         response = client.request(method, route, headers=headers(issuer), json=data)
         assert response.status_code == expected

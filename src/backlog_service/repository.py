@@ -1,11 +1,11 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backlog_service.domain import Story, StoryChange, StoryPage
+from backlog_service.domain import Priority, Status, Story, StoryChange, StoryPage
 from backlog_service.models import StoryRecord
 
 
@@ -26,16 +26,43 @@ class StoryRepository:
         self.commit()
         return Story.model_validate(record)
 
-    def list_for_project(self, project_id: UUID, *, limit: int, offset: int) -> StoryPage:
+    def list_for_project(
+        self,
+        project_id: UUID,
+        *,
+        limit: int,
+        offset: int,
+        q: str = "",
+        status: Status | None = None,
+        priority: Priority | None = None,
+    ) -> StoryPage:
         condition = StoryRecord.project_id == project_id
+        if q:
+            # Explicit escaping keeps LIKE wildcards (and the escape itself) literal.
+            pattern = "%" + q.lower().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            search = or_(
+                func.lower(StoryRecord.title).like(pattern, escape="!"),
+                func.lower(StoryRecord.description).like(pattern, escape="!"),
+            )
+            try:
+                story_id = UUID(q)
+            except ValueError:
+                pass
+            else:
+                search = or_(search, StoryRecord.id == story_id)
+            condition &= search
+        if status is not None:
+            condition &= StoryRecord.status == status
+        if priority is not None:
+            condition &= StoryRecord.priority == priority
         total = self.session.scalar(select(func.count()).select_from(StoryRecord).where(condition))
-        priority = case(
+        priority_order = case(
             (StoryRecord.priority == "high", 0), (StoryRecord.priority == "medium", 1), else_=2
         )
         records = self.session.scalars(
             select(StoryRecord)
             .where(condition)
-            .order_by(priority, StoryRecord.created_at, StoryRecord.id)
+            .order_by(priority_order, StoryRecord.created_at, StoryRecord.id)
             .limit(limit)
             .offset(offset)
         ).all()

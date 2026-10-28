@@ -9,7 +9,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backlog_service.domain import Story, StoryChange, StoryDraft, StoryPage
+from backlog_service.domain import (
+    Priority,
+    SearchText,
+    Status,
+    Story,
+    StoryChange,
+    StoryDraft,
+    StoryPage,
+)
 from backlog_service.models import StoryRecord
 from backlog_service.project_access import ProjectsUnavailable, ProjectUnavailable
 from backlog_service.repository import StoryRepository
@@ -88,8 +96,13 @@ def list_stories(
     service: Service,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
+    q: Annotated[SearchText, Query()] = "",
+    status: Status | None = None,
+    priority: Priority | None = None,
 ) -> StoryPage:
-    return service.list(context.project_id, limit=limit, offset=offset)
+    return service.list(
+        context.project_id, limit=limit, offset=offset, q=q, status=status, priority=priority
+    )
 
 
 @router.get("/projects/{project_id}/stories/{story_id}", response_model=Story)

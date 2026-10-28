@@ -1,6 +1,6 @@
 # MOD1 Backlog Service
 
-MVP `0.1.0` de histórias por projeto: registrar necessidades e critérios de aceite,
+MVP `0.2.0` de histórias por projeto: registrar necessidades e critérios de aceite,
 priorizar entregas e acompanhar o progresso. O usuário entra pelo serviço de
 identidade e acessa apenas projetos autorizados pelo serviço de projetos.
 
@@ -83,8 +83,14 @@ e não exclui registros ou schemas.
 ## Limites
 
 Proprietário único por projeto; equipes/RBAC dependem do serviço de projetos.
-Sem tarefas, sprints, estimativas, exclusão ou edição do texto das histórias.
-PATCH modifica prioridade/status; mesmos valores preservam `updated_at`.
+Sem tarefas, sprints, estimativas ou exclusão de histórias.
+PATCH modifica título, descrição, critérios de aceite, prioridade/status;
+mesmos valores preservam `updated_at`. Título aparado de 1–120 caracteres,
+descrição/critérios de 0–2000; campos extras, null e imutáveis são recusados.
+GET stories aceita `q` aparado até 200 caracteres, `status` e `priority` opcionais.
+A busca literal ignora maiúsculas/minúsculas em título/descrição e também encontra
+UUID exato. `%` e `_` são literais; filtros combinam AND antes de total/paginação.
+Não há alteração de schema nem migração nesta versão.
 Não há controle otimista: última escrita em um mesmo campo prevalece.
 Logout/desativação não revoga imediatamente JWT já emitido nos consumidores.
 Docker/deploy não foram validados. [CHANGELOG.md](CHANGELOG.md) registra a versão candidata.

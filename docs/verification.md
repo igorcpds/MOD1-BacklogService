@@ -1,4 +1,25 @@
-# Validação do backlog MVP — 11/10/2026
+# Validação do backlog
+
+## Refinamento 0.2.0 — 28/10/2026, local
+
+Worktree `us-backlog-refinement`, branch `feat/us-backlog-refinement`, Python 3.12.13
+no Windows. Instalação `uv sync --locked --python 3.12 --no-install-project` e
+`uv sync --locked --no-build-isolation`, sem configuração remota ou mudança de schema.
+
+- Baseline: 118 testes aprovados, 1 skip de PostgreSQL.
+- RED: PATCH de texto rejeitado e filtros ausentes confirmados em testes de serviço/HTTP.
+- GREEN: 148 testes aprovados, 1 skip de PostgreSQL; aviso de depreciação HTTPX já existente.
+- Ruff check/format, mypy e `uv lock --check` aprovados.
+- `uv build --no-build-isolation`: wheel/sdist `0.2.0` construídos.
+- Cobertos textos literais/Unicode, limites, imutáveis, no-op, UUID, busca literal,
+  filtros AND antes de total/paginação e negação de acesso antes do banco.
+- Cada chamada protegida continua confirmando GET Projects com o mesmo Bearer.
+
+O teste PostgreSQL foi ampliado para texto, busca e filtros, mas ainda depende de
+`TEST_DATABASE_URL` loopback descartável. Integração do frontend, revisão independente
+e execução PostgreSQL são conferências separadas. Nenhum deploy, push, tag ou release.
+
+## Histórico do MVP 0.1.0 — 11/10/2026
 
 Versão candidata `0.1.0`; frontend integrado `0.2.0`. Resultados observados no Windows,
 Python 3.12.15. Este recorte pode ser demonstrado localmente.

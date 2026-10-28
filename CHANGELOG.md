@@ -1,6 +1,14 @@
 # Changelog
 
-Versão candidata SemVer: `0.1.0`, definida em `pyproject.toml`. Sem tag/release nesta etapa.
+Versão candidata SemVer: `0.2.0`, definida em `pyproject.toml`. Sem tag/release nesta etapa.
+
+## Unreleased — 0.2.0
+
+- PATCH de título, descrição e critérios de aceite, preservando imutáveis e timestamp em no-op.
+- Busca literal por título/descrição ou UUID, filtros de status/prioridade antes de total/paginação.
+- Busca Unicode no SQLite local e PostgreSQL; `%` e `_` tratados como texto literal.
+- Acesso continua confirmado na API de projetos em cada operação com o mesmo Bearer.
+- Nenhuma alteração de schema; verificações locais, sem publicação.
 
 ## Unreleased — 0.1.0
 

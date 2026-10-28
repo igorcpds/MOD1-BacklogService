@@ -2,7 +2,15 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from backlog_service.domain import Story, StoryChange, StoryDraft, StoryPage
+from backlog_service.domain import (
+    Priority,
+    Status,
+    Story,
+    StoryChange,
+    StoryDraft,
+    StoryPage,
+    trim_padding,
+)
 from backlog_service.repository import StoryRepository
 
 
@@ -37,10 +45,24 @@ class StoriesService:
             )
         )
 
-    def list(self, project_id: UUID, *, limit: int = 20, offset: int = 0) -> StoryPage:
+    def list(
+        self,
+        project_id: UUID,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+        q: str = "",
+        status: Status | None = None,
+        priority: Priority | None = None,
+    ) -> StoryPage:
         if not 1 <= limit <= 100 or offset < 0:
             raise ValueError("Invalid pagination")
-        return self.repository.list_for_project(project_id, limit=limit, offset=offset)
+        query = str(trim_padding(q))
+        if len(query) > 200:
+            raise ValueError("Invalid search")
+        return self.repository.list_for_project(
+            project_id, limit=limit, offset=offset, q=query, status=status, priority=priority
+        )
 
     def get(self, project_id: UUID, story_id: UUID) -> Story | None:
         return self.repository.get_for_project(project_id, story_id)

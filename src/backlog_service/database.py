@@ -1,4 +1,6 @@
-from sqlalchemy import Engine, create_engine
+from sqlite3 import Connection
+
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema
 
@@ -15,6 +17,12 @@ def create_database_engine(settings: Settings) -> Engine:
             poolclass=StaticPool,
             hide_parameters=True,
         )
+
+        @event.listens_for(engine, "connect")
+        def unicode_lower(connection: Connection, connection_record: object) -> None:
+            # SQLite's built-in lower is ASCII-only; retain Unicode search in local dev.
+            connection.create_function("lower", 1, str.lower, deterministic=True)
+
         target = None
     else:
         engine = create_engine(

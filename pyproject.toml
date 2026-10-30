@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "backlog-service"
-version = "0.1.0"
+version = "0.3.0"
 description = "Historias priorizadas e progresso por projeto - MVP de Igor"
 requires-python = ">=3.12"
 dependencies = [

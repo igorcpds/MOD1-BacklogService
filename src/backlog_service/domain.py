@@ -1,12 +1,20 @@
 import re
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
 Priority = Literal["high", "medium", "low"]
 Status = Literal["todo", "in_progress", "done"]
+
+
+def trim_padding(value: object) -> object:
+    # Match browser whitespace plus Python's separators; BOM is padding at the edges.
+    return re.sub(r"^[\s\ufeff]+|[\s\ufeff]+$", "", value) if isinstance(value, str) else value
+
+
+SearchText = Annotated[str, BeforeValidator(trim_padding), Field(max_length=200)]
 
 
 class StoryDraft(BaseModel):
@@ -19,21 +27,28 @@ class StoryDraft(BaseModel):
     @field_validator("title", mode="before")
     @classmethod
     def trim_title(cls, value: object) -> object:
-        # Match browser whitespace plus Python's separators; BOM is padding at the edges.
-        return re.sub(r"^[\s\ufeff]+|[\s\ufeff]+$", "", value) if isinstance(value, str) else value
+        return trim_padding(value)
 
 
 class StoryChange(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    acceptance_criteria: str | None = Field(default=None, max_length=2000)
     priority: Priority | None = None
     status: Status | None = None
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def trim_title(cls, value: object) -> object:
+        return trim_padding(value)
 
     @model_validator(mode="after")
     def require_change(self) -> "StoryChange":
         if not self.model_fields_set or any(
             getattr(self, field) is None for field in self.model_fields_set
         ):
-            raise ValueError("Provide priority or status")
+            raise ValueError("Provide at least one non-null editable field")
         return self
 
 

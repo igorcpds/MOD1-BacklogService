@@ -1,4 +1,57 @@
-# Validação do backlog MVP — 11/10/2026
+# Validação do backlog
+
+## Colaboração/perfil 0.3.0 — 28/10/2026, somente local
+
+- Suíte completa com PostgreSQL 16.15 descartável em loopback, UTF-8/ICU und:
+  **194 testes passaram, nenhum skip**, em 55,32 s.
+- Ruff check/formato, mypy, lock e wheel/sdist verificados no candidato.
+- Frontend 0.4.0: **96 testes passaram sem skips**, com três APIs reais e bancos/chaves
+  temporários. Teste ampliado de duas contas também passou: convite, perfil,
+  Desenvolvedor/status, promoção a PO e remoção/reutilização negada do código.
+- Revisão própria de isolamento, contratos, expiração e concorrência. A revisão
+  independente deste lote ficou indisponível por limite de uso dos auxiliares;
+  a revisão independente histórica abaixo cobre somente o lote anterior.
+- PostgreSQL encerrado e dados temporários removidos. Sem main/push/deploy/tag,
+  sem acesso ao Neon ou alteração de grants/configuração remota.
+
+## Conferência integrada concluída — 28/10/2026
+
+- Suíte completa com PostgreSQL 16.15 **ICU/und e UTF-8** descartável em loopback:
+  **149 passaram, nenhum skip**, em 51,19 s. Um aviso de depreciação HTTPX já
+  existente não representa falha de teste.
+- A rodada anterior com locale libc `C` teve **148 aprovados e uma falha** na busca
+  ÁRVORE/árvore: esse locale converte somente ASCII. Os testes de acentos foram
+  mantidos; a configuração Unicode suportada passou. Esta é uma condição do
+  ambiente que deve ser conferida antes de publicar, documentada em
+  [database-neon.md](database-neon.md) e [integration.md](integration.md).
+- Frontend 0.3.0: **85 testes aprovados sem skips**, incluindo edição, filtros,
+  persistência após reinício e isolamento com três APIs reais e SQLite temporário.
+- Revisão independente dos backends sem achados críticos/importantes. A interface
+  preserva rascunhos se atualizar a lista falhar, com regressão RED→GREEN.
+- Banco temporário encerrado/removido. Nenhum acesso ao Neon, grant, deploy ou
+  alteração de main. As consultas de diagnóstico de locale documentadas não foram
+  executadas contra o ambiente publicado.
+
+## Refinamento 0.2.0 — 28/10/2026, local
+
+Worktree `us-backlog-refinement`, branch `feat/us-backlog-refinement`, Python 3.12.13
+no Windows. Instalação `uv sync --locked --python 3.12 --no-install-project` e
+`uv sync --locked --no-build-isolation`, sem configuração remota ou mudança de schema.
+
+- Baseline: 118 testes aprovados, 1 skip de PostgreSQL.
+- RED: PATCH de texto rejeitado e filtros ausentes confirmados em testes de serviço/HTTP.
+- GREEN: 148 testes aprovados, 1 skip de PostgreSQL; aviso de depreciação HTTPX já existente.
+- Ruff check/format, mypy e `uv lock --check` aprovados.
+- `uv build --no-build-isolation`: wheel/sdist `0.2.0` construídos.
+- Cobertos textos literais/Unicode, limites, imutáveis, no-op, UUID, busca literal,
+  filtros AND antes de total/paginação e negação de acesso antes do banco.
+- Cada chamada protegida continua confirmando GET Projects com o mesmo Bearer.
+
+O teste PostgreSQL foi ampliado para texto, busca e filtros, mas ainda depende de
+`TEST_DATABASE_URL` loopback descartável. Integração do frontend, revisão independente
+e execução PostgreSQL são conferências separadas. Nenhum deploy, push, tag ou release.
+
+## Histórico do MVP 0.1.0 — 11/10/2026
 
 Versão candidata `0.1.0`; frontend integrado `0.2.0`. Resultados observados no Windows,
 Python 3.12.15. Este recorte pode ser demonstrado localmente.

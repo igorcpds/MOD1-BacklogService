@@ -1,6 +1,21 @@
 # Changelog
 
-Versão candidata SemVer: `0.1.0`, definida em `pyproject.toml`. Sem tag/release nesta etapa.
+## Unreleased — 0.3.0
+
+- Autorização canônica por `/projects/{id}/access`, com IDs, papéis e permissões coerentes.
+- Permissões distintas para consultar, criar, refinar e atualizar somente status; negado antes de consultar histórias.
+- Revogação/expiração verificadas em cada operação; 403 separado de 401/404/503.
+- Requer Projetos 0.4.0, sem fallback para contrato antigo de proprietário; sem alteração de schema.
+
+Versão candidata SemVer: `0.3.0`, definida em `pyproject.toml`. Sem tag/release nesta etapa.
+
+## Unreleased — 0.2.0
+
+- PATCH de título, descrição e critérios de aceite, preservando imutáveis e timestamp em no-op.
+- Busca literal por título/descrição ou UUID, filtros de status/prioridade antes de total/paginação.
+- Busca Unicode no SQLite local e PostgreSQL; `%` e `_` tratados como texto literal.
+- Acesso continua confirmado na API de projetos em cada operação com o mesmo Bearer.
+- Nenhuma alteração de schema; verificações locais, sem publicação.
 
 ## Unreleased — 0.1.0
 

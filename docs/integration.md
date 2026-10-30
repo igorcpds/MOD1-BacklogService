@@ -1,4 +1,4 @@
-# Contrato — backlog 0.1.0
+# Contrato — backlog 0.3.0
 
 | Método | Rota | Resultado |
 | --- | --- | --- |
@@ -15,8 +15,11 @@ Readiness verifica apenas o banco do backlog; não garante disponibilidade exter
 POST aceita `title` (aparado, 1–120 caracteres Unicode), `description` e
 `acceptance_criteria` (opcionais, padrão vazio, até 2000 cada), `priority`
 (`high`, `medium`, `low`, padrão `medium`). HTML e quebras de linha são texto literal.
-Campos extras, null e outros tipos são recusados. PATCH aceita somente `priority`
-e/ou `status` (`todo`, `in_progress`, `done`), ao menos um campo não null.
+Campos extras, null e outros tipos são recusados. PATCH aceita subconjunto não vazio
+de `title` (aparado, 1–120), `description`/`acceptance_criteria` (0–2000), `priority`
+e `status` (`todo`, `in_progress`, `done`); null é recusado mesmo junto a campos válidos.
+Descrição e critérios vazios apagam o texto anterior. IDs, autor, projeto e datas
+não são editáveis. Não há alteração de schema nem migração nesta versão.
 
 Story contém `id`, `project_id`, `created_by`, `title`, `description`,
 `acceptance_criteria`, `priority`, `status`, `created_at`, `updated_at`.
@@ -25,6 +28,24 @@ IDs/datas UTC vêm do servidor; autor do JWT, projeto da rota. StoryPage contém
 (não negativo). Ordem: alta → média → baixa, criação crescente, UUID no desempate.
 PATCH com os mesmos valores preserva `updated_at`; alterações efetivas atualizam a data.
 
+GET da coleção aceita `q` (padrão vazio, aparado, até 200 caracteres Unicode),
+`status` e `priority` opcionais com os mesmos enums das histórias. A busca literal
+ignora maiúsculas/minúsculas em título ou descrição, ou corresponde ao UUID exato
+da história. `%`, `_` e `!` não são curingas. Critérios de aceite não participam
+da busca. Texto vazio só desativa a busca; os filtros continuam ativos.
+Os filtros combinam AND e são aplicados antes de calcular `total`, `limit` e `offset`,
+preservando a ordenação. Exemplo: `?q=entrega&status=done&priority=high&limit=20`.
+
+No PostgreSQL, a conversão de maiúsculas segue o locale/collation do banco;
+UTF-8 sozinho não garante busca sem distinção de caixa fora de ASCII.
+O banco precisa converter `ÁRVORE` para `árvore`, por exemplo. O locale libc
+`C`/`POSIX` não atende esse requisito. Para desenvolvimento descartável, ICU
+`und` é uma opção quando disponível. Locales com regras específicas de idioma
+podem divergir da conversão Unicode do termo de busca feita pelo Python.
+Confira o banco conforme [database-neon.md](database-neon.md#busca-unicode).
+A aplicação não muda collations nem configura o banco no startup. O SQLite
+local registra `lower` Unicode por conexão, sem alterar schema.
+
 ## Acesso
 
 RS256, `typ=JWT`, `kid`, issuer/audience configurados, `iat`/`exp` inteiros,
@@ -32,17 +53,24 @@ RS256, `typ=JWT`, `kid`, issuer/audience configurados, `iat`/`exp` inteiros,
 refresh mínimo 30 s inclusive falhas. Um kid novo pode aguardar esse intervalo;
 chaves conhecidas em cache não esperam rede. Não há revogação imediata.
 
-Cada operação confirma acesso por GET `/projects/{project_id}` na API configurada,
+Cada operação confirma acesso por GET `/projects/{project_id}/access` na API configurada,
 com o mesmo Bearer, timeout 5 s, sem retry/redirect/cache de autorização.
-UUID do projeto e proprietário precisam coincidir com rota e JWT. Nenhuma história
-é consultada/gravada antes disso. Sem FK/join/leitura de outros módulos;
+Exige Projetos 0.4.0 e seu contrato canônico de project_id/user_id/is_owner/roles/permissions.
+IDs precisam coincidir com rota/JWT; papéis e permissões devem ser únicos, conhecidos
+e coerentes com a matriz fixa. Payload antigo de proprietário é recusado com 503.
+GET exige backlog:read; POST backlog:create; PATCH somente status exige
+backlog:update_status; qualquer outro campo exige backlog:update. Negação resulta
+em 403 sem consultar/gravar histórias. Remover/expirar papel afeta novas verificações;
+operação já autorizada pode terminar porque não existe transação distribuída.
+Sem FK/join/leitura de outros módulos;
 `created_by` registra autoria, não autorização.
 
 | Status | Significado |
 | --- | --- |
 | 401 | Token ausente/inválido ou rejeitado por projetos; `WWW-Authenticate: Bearer` |
+| 403 | Projeto legível, mas ação sem permissão; manter a sessão e atualizar acessos |
 | 404 | Projeto ausente/alheio, história ausente ou de outro projeto; mesma mensagem |
-| 422 | Entrada/paginação inválida, sem repetir valores |
+| 422 | Entrada, busca, enum ou paginação inválida, sem repetir valores |
 | 503 | Banco/JWKS/projetos indisponíveis ou inconsistentes; mensagem genérica |
 
 Não reenviar automaticamente POST/PATCH após timeout: a gravação pode ter ocorrido.

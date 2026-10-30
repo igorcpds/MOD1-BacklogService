@@ -17,6 +17,59 @@ from backlog_service.service import StoriesService
 
 
 @pytest.fixture
+def access_payload():
+    role_permissions = {
+        "developer": [
+            "project:read",
+            "project:members:read",
+            "backlog:read",
+            "backlog:update_status",
+        ],
+        "product_owner": [
+            "project:read",
+            "project:update",
+            "project:members:read",
+            "backlog:read",
+            "backlog:create",
+            "backlog:update",
+            "backlog:update_status",
+        ],
+        "project_manager": [
+            "project:read",
+            "project:update",
+            "project:members:read",
+            "project:members:manage",
+            "backlog:read",
+            "backlog:create",
+            "backlog:update",
+            "backlog:update_status",
+        ],
+        "owner": [
+            "project:read",
+            "project:update",
+            "project:delete",
+            "project:members:read",
+            "project:members:manage",
+            "backlog:read",
+            "backlog:create",
+            "backlog:update",
+            "backlog:update_status",
+        ],
+    }
+
+    def payload(project_id, user_id, *, roles=("owner",)):
+        return {
+            "project_id": str(project_id),
+            "user_id": str(user_id),
+            "is_owner": roles == ("owner",) or roles == ["owner"],
+            "roles": sorted(roles),
+            "permissions": sorted({p for role in roles for p in role_permissions[role]}),
+        }
+
+    return payload
+
+
+@pytest.fixture
 def project_id():
     return UUID("11111111-1111-4111-8111-111111111111")
 

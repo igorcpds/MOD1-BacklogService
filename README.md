@@ -1,14 +1,18 @@
 # MOD1 Backlog Service
 
-## Autorização por ação — candidato 0.3.0
+## Backlog expandido — 0.4.0 preparado para release
 
-Exige Projetos 0.4.0: cada operação consulta `/projects/{id}/access` com o mesmo
-Bearer e valida a matriz canônica. Desenvolvedor consulta e atualiza somente
-status; PO/PM também criam/refinam histórias. 403 mantém a sessão, revogação e
-expiração afetam novas verificações. Sem mudança de schema no Backlog.
+Exige Projetos 0.5.0 e Identidade 0.4.0: cada operação valida a sessão online e
+consulta `/projects/{id}/access/v2` com o mesmo Bearer. Papéis personalizados e
+concessões por equipes participam das permissões. Mutações respeitam o ciclo de
+vida e usam leases duráveis. 403 mantém a sessão; revogação e expiração afetam
+novas verificações. Migração explícita é necessária antes do novo runtime.
 [Contrato de integração](docs/integration.md).
 
-MVP `0.3.0` de histórias por projeto: registrar necessidades e critérios de aceite,
+Organização do serviço, dependências e fluxos de autorização:
+[arquitetura multicamadas](docs/architecture.md).
+
+Serviço `0.4.0` de histórias por projeto: registrar necessidades e critérios de aceite,
 priorizar entregas e acompanhar o progresso. O usuário entra pelo serviço de
 identidade e acessa apenas projetos autorizados pelo serviço de projetos.
 
@@ -35,7 +39,7 @@ arquivo de CA confiável. Obtenha o caminho com `.venv/Scripts/python.exe -m cer
 .venv/Scripts/python.exe -m backlog_service.cli init
 ```
 
-A CLI cria apenas o schema configurado e a tabela de histórias, sem apagar dados.
+A CLI cria/migra apenas o schema configurado e suas tabelas, sem apagar dados.
 Ela não gerencia roles. Configure as permissões conforme
 [database-neon.md](docs/database-neon.md), depois use a conta runtime na API.
 Startup não cria nem migra tabelas.
@@ -90,15 +94,32 @@ e não exclui registros ou schemas.
 
 ## Limites
 
-Proprietário único por projeto; equipes/RBAC dependem do serviço de projetos.
-Sem tarefas, sprints, estimativas ou exclusão de histórias.
+Equipes/RBAC e ciclo de vida dependem do serviço de projetos.
+Há épicos, tarefas e estimativas; não há sprints ou exclusão de histórias.
 PATCH modifica título, descrição, critérios de aceite, prioridade/status;
 mesmos valores preservam `updated_at`. Título aparado de 1–120 caracteres,
 descrição/critérios de 0–2000; campos extras, null e imutáveis são recusados.
 GET stories aceita `q` aparado até 200 caracteres, `status` e `priority` opcionais.
 A busca literal ignora maiúsculas/minúsculas em título/descrição e também encontra
 UUID exato. `%` e `_` são literais; filtros combinam AND antes de total/paginação.
-Não há alteração de schema nem migração nesta versão.
-Não há controle otimista: última escrita em um mesmo campo prevalece.
-Logout/desativação não revoga imediatamente JWT já emitido nos consumidores.
-Docker/deploy não foram validados. [CHANGELOG.md](CHANGELOG.md) registra a versão candidata.
+`/items` e reordenação oferecem controle de versão; o PATCH legado de `/stories`
+continua sem `expected_version`. A migração aditiva preserva IDs e dados.
+Logout/desativação são observados pela verificação online de sessão, habilitada
+por padrão. [CHANGELOG.md](CHANGELOG.md) registra a release preparada; esta
+documentação não comprova publicação ou deploy.
+
+## Contratos do backlog expandido
+
+A implementação local mantém `/stories` e acrescenta itens tipados, épicos,
+tarefas, histórico, dependências, quadro e reordenação versionada. Identidade
+online e autorização Projects access/v2 são exigidas por padrão; mutações usam
+leases duráveis de Projetos. Execute `backlog-service init` explicitamente para
+migrações aditivas antes do novo runtime; startup não faz DDL.
+
+Contratos e limites: [itens e migração](docs/backlog-items.md),
+[recomendações aprovadas por pessoas](docs/recommendations.md) e
+[proposta local de eventos de revisão](docs/code-review-proposal.md).
+IA real e eventos de revisão permanecem desabilitados. O adaptador de revisão
+depende de contrato explícito com o produtor antes de qualquer habilitação.
+Provider real de IA e integração do produtor externo permanecem com validação
+pendente; transportes sintéticos locais não são evidência de integração externa.

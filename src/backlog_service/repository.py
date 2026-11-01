@@ -36,7 +36,7 @@ class StoryRepository:
         status: Status | None = None,
         priority: Priority | None = None,
     ) -> StoryPage:
-        condition = StoryRecord.project_id == project_id
+        condition = (StoryRecord.project_id == project_id) & (StoryRecord.kind == "story")
         if q:
             # Explicit escaping keeps LIKE wildcards (and the escape itself) literal.
             pattern = "%" + q.lower().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
@@ -75,14 +75,14 @@ class StoryRepository:
 
     def record(self, project_id: UUID, story_id: UUID) -> StoryRecord | None:
         return self.session.scalar(
-            select(StoryRecord).where(
-                StoryRecord.project_id == project_id, StoryRecord.id == story_id
-            )
+            select(StoryRecord)
+            .where(StoryRecord.project_id == project_id, StoryRecord.id == story_id)
+            .execution_options(populate_existing=True)
         )
 
     def get_for_project(self, project_id: UUID, story_id: UUID) -> Story | None:
         record = self.record(project_id, story_id)
-        return Story.model_validate(record) if record else None
+        return Story.model_validate(record) if record and record.kind == "story" else None
 
     def update_for_project(
         self, project_id: UUID, story_id: UUID, change: StoryChange, now: datetime

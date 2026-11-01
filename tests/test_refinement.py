@@ -3,16 +3,17 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from story_context import context_for
 
 from backlog_service.domain import StoryChange, StoryDraft
 
 
 def test_text_patch_persists_and_preserves_immutable_fields(service, project_id, actor_id):
-    story = service.create(project_id, actor_id, StoryDraft(title="Original"))
+    story = service.create(context_for(project_id, actor_id), StoryDraft(title="Original"))
     later = datetime(2026, 10, 12, tzinfo=UTC)
     service.clock = lambda: later
     updated = service.update(
-        project_id,
+        context_for(project_id),
         story.id,
         StoryChange(
             title="\ufeff Nova história \u00a0",
@@ -32,12 +33,15 @@ def test_text_patch_persists_and_preserves_immutable_fields(service, project_id,
         project_id,
         story.created_at,
     )
-    assert service.get(project_id, story.id) == updated
-    assert service.update(uuid4(), story.id, StoryChange(title="Alheia")) is None
+    assert service.get(context_for(project_id), story.id) == updated
+    assert service.update(context_for(uuid4()), story.id, StoryChange(title="Alheia")) is None
     service.clock = lambda: datetime(2026, 10, 13, tzinfo=UTC)
-    assert service.update(project_id, story.id, StoryChange(title=" Nova história ")) == updated
+    assert (
+        service.update(context_for(project_id), story.id, StoryChange(title=" Nova história "))
+        == updated
+    )
     cleared = service.update(
-        project_id, story.id, StoryChange(description="", acceptance_criteria="")
+        context_for(project_id), story.id, StoryChange(description="", acceptance_criteria="")
     )
     assert (cleared.description, cleared.acceptance_criteria) == ("", "")
 
@@ -82,12 +86,13 @@ def test_literal_case_insensitive_search(service, project_id, actor_id, query, e
         ("Entrega baixa", "axb!", "low"),
     ]:
         service.create(
-            project_id,
-            actor_id,
+            context_for(project_id, actor_id),
             StoryDraft(title=title, description=description, priority=priority),
         )
-    service.create(uuid4(), actor_id, StoryDraft(title="Entrega alheia", priority="high"))
-    page = service.list(project_id, q=query)
+    service.create(
+        context_for(uuid4(), actor_id), StoryDraft(title="Entrega alheia", priority="high")
+    )
+    page = service.list(context_for(project_id), q=query)
     assert [story.title for story in page.items] == expected
     assert page.total == len(expected)
 
@@ -96,16 +101,18 @@ def test_combined_filters_precede_count_and_pagination(service, project_id, acto
     ids = []
     for index in range(4):
         story = service.create(
-            project_id, actor_id, StoryDraft(title=f"Entrega {index}", priority="high")
+            context_for(project_id, actor_id), StoryDraft(title=f"Entrega {index}", priority="high")
         )
         ids.append(story.id)
         if index < 3:
-            service.update(project_id, story.id, StoryChange(status="done"))
-    service.create(project_id, actor_id, StoryDraft(title="Entrega média"))
-    page = service.list(project_id, q="entrega", status="done", priority="high", limit=1, offset=1)
+            service.update(context_for(project_id), story.id, StoryChange(status="done"))
+    service.create(context_for(project_id, actor_id), StoryDraft(title="Entrega média"))
+    page = service.list(
+        context_for(project_id), q="entrega", status="done", priority="high", limit=1, offset=1
+    )
     assert (page.total, page.limit, page.offset) == (3, 1, 1)
     assert [story.id for story in page.items] == sorted(ids[:3])[1:2]
-    exact = service.list(project_id, q=str(ids[0]).upper())
+    exact = service.list(context_for(project_id), q=str(ids[0]).upper())
     assert [story.id for story in exact.items] == [ids[0]]
-    assert service.list(project_id, q=str(ids[0])[:20]).total == 0
-    assert service.list(project_id, q=str(ids[0]), status="todo").total == 0
+    assert service.list(context_for(project_id), q=str(ids[0])[:20]).total == 0
+    assert service.list(context_for(project_id), q=str(ids[0]), status="todo").total == 0

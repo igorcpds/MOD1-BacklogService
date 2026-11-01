@@ -1,4 +1,17 @@
-# Contrato — backlog 0.3.0
+# Contrato — backlog 0.4.0
+
+Contrato atual: [itens, quadro, permissões e migração](backlog-items.md),
+[recomendações com aprovação humana](recommendations.md) e
+[adaptador proposto de revisão](code-review-proposal.md). IA real permanece
+desabilitada; revisão externa depende de contrato ainda não acordado e também
+permanece desabilitada. Release preparada sem comprovação de deploy.
+
+Requer Identidade 0.4.0 e Projetos 0.5.0. Em relação a 0.3.0, sessão é consultada
+online por padrão, `/access/v2` substitui v1 e mutações exigem lease de escrita.
+Compatibilidade v1 é opt-in explícito, nunca fallback automático. Novas tabelas e
+colunas exigem `backlog-service init` administrativo explícito antes do runtime.
+As rotas `/stories` abaixo mantêm o contrato legado de campos e ordenação; os
+mesmos UUIDs podem ser acessados por `/items` com os recursos novos.
 
 | Método | Rota | Resultado |
 | --- | --- | --- |
@@ -19,7 +32,7 @@ Campos extras, null e outros tipos são recusados. PATCH aceita subconjunto não
 de `title` (aparado, 1–120), `description`/`acceptance_criteria` (0–2000), `priority`
 e `status` (`todo`, `in_progress`, `done`); null é recusado mesmo junto a campos válidos.
 Descrição e critérios vazios apagam o texto anterior. IDs, autor, projeto e datas
-não são editáveis. Não há alteração de schema nem migração nesta versão.
+não são editáveis. A migração aditiva preserva esses campos e seus valores.
 
 Story contém `id`, `project_id`, `created_by`, `title`, `description`,
 `acceptance_criteria`, `priority`, `status`, `created_at`, `updated_at`.
@@ -51,13 +64,16 @@ local registra `lower` Unicode por conexão, sem alterar schema.
 RS256, `typ=JWT`, `kid`, issuer/audience configurados, `iat`/`exp` inteiros,
 `sub`/`jti` UUIDs. JWKS exclusivamente configurado: timeout 5 s, cache 300 s,
 refresh mínimo 30 s inclusive falhas. Um kid novo pode aguardar esse intervalo;
-chaves conhecidas em cache não esperam rede. Não há revogação imediata.
+chaves conhecidas em cache não esperam rede. Depois da validação local, o estado
+da sessão é confirmado em `/auth/me` na Identidade, sem cache positivo. A consulta
+online observa logout, revogação e desativação; falha de dependência retorna 503.
 
-Cada operação confirma acesso por GET `/projects/{project_id}/access` na API configurada,
+Cada operação confirma acesso por GET `/projects/{project_id}/access/v2` na API configurada,
 com o mesmo Bearer, timeout 5 s, sem retry/redirect/cache de autorização.
-Exige Projetos 0.4.0 e seu contrato canônico de project_id/user_id/is_owner/roles/permissions.
+Exige Projetos 0.5.0 e seu contrato v2 com catálogo, definições e origens das
+permissões, além de project_id/user_id/is_owner/roles/permissions.
 IDs precisam coincidir com rota/JWT; papéis e permissões devem ser únicos, conhecidos
-e coerentes com a matriz fixa. Payload antigo de proprietário é recusado com 503.
+e coerentes com as definições autorizadas. Payload antigo de proprietário é recusado com 503.
 GET exige backlog:read; POST backlog:create; PATCH somente status exige
 backlog:update_status; qualquer outro campo exige backlog:update. Negação resulta
 em 403 sem consultar/gravar histórias. Remover/expirar papel afeta novas verificações;

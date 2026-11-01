@@ -150,6 +150,7 @@ def issuer():
         "owner": owner,
         "settings": Settings(
             database_url="sqlite:///:memory:",
+            auth_session_check_enabled=False,
             jwks_url=f"http://127.0.0.1:{server.server_port}/jwks",
             _env_file=None,
         ),

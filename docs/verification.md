@@ -1,5 +1,63 @@
 # Validação do backlog
 
+## Itens, recomendações e proposta de revisão — 31/10/2026, somente local
+
+- `uv run pytest -q --tb=short` com PostgreSQL descartável loopback, schemas aleatórios
+  e guarda contra remoto: **262 testes passaram, nenhum skip**, em 58,42 s.
+- `uv run ruff check src tests`, `uv run ruff format --check src tests`,
+  `uv run mypy` (24 módulos), `uv lock --check` e `uv build`: aprovados.
+- RED/GREEN: tipos/campos novos, migração de tabela antiga, validação online de
+  Identidade/access-v2, proposta/aprovação e provedor desabilitado, ingresso de
+  revisão ausente, replay alterando quadro, responsável indisponível bloqueando
+  status e leitura concorrente de quadro expondo versão incoerente.
+- SQLite e PostgreSQL usam dados/atores sintéticos. PostgreSQL adicional cobre
+  migração idempotente de história antiga, DAG, reorder, aprovação de proposta e
+  replay concorrente do mesmo evento. SQLite cobre conflitos concorrentes de
+  versão/reorder/aprovação, rollback de recibo e autorização antes de SQL.
+- HTTP controlado verifica mesmo Bearer, consulta online sem cache positivo,
+  leases antes da escrita/liberação após commit ou rollback, perda de elegibilidade
+  do responsável e metadados true/false/null sem dados de perfil.
+- Ingresso proposto exige chave dedicada + Bearer atual + escopo por projeto;
+  sem configuração/mapeamento retorna 503. Eventos antigos/conflitantes retornam
+  409 e replay idêntico não duplica versão, histórico, recibo ou efeito no quadro.
+- Verificados UTF-8 da documentação, `git diff --check`, exclusão de artefatos
+  privados dos arquivos rastreados e dos pacotes wheel/sdist.
+- Permanece um aviso preexistente de depreciação Starlette/HTTPX.
+
+Não houve chamadas a LLM real, SMTP, produtor de revisão ou produção. Integração
+externa de IA/revisão permanece pendente; testes HTTP controlados não a comprovam.
+Validação entre os quatro serviços e frontend é uma etapa separada da integração.
+As alterações novas desta rodada aguardam revisão local antes de commit; o commit
+anterior de itens é `3d80553a84898229ca6ac1d16e7f494bf4c3a3f1`, com coautoria Igor.
+
+## Arquitetura multicamadas — 30/10/2026, somente local
+
+- Baseline com Python 3.12.15 e SQLite sintético: **193 testes passaram, 1 skip**
+  de PostgreSQL descartável não configurado; Ruff check/formato, mypy e build aprovados.
+- RED antes da refatoração: teste de dependências detectou imports de SQLAlchemy,
+  modelo ORM, repositório e mecanismos de integração/segurança em `routes.py`.
+  A versão final percorre AST, inclusive imports locais, relativos e por pacote.
+- GREEN: **205 testes passaram, 1 skip**, em 44,59 s. O aviso já existente de
+  depreciação HTTPX/Starlette continua; nenhum novo aviso foi observado.
+- Novos testes de aplicação observam SQL real para negar criação, listagem,
+  detalhe e PATCH antes de acesso ao banco. Cobrem status isolado do desenvolvedor
+  e rejeição de status combinado com texto. Remover temporariamente os checks de
+  permissão provocou **7 falhas esperadas**; restaurá-los recuperou o GREEN.
+- Testes HTTP adicionais exercitam timeout e contrato inválido de Projetos em
+  todas as operações, com 503 sanitizado e nenhum SQL. A cobertura existente
+  mantém 401/403/404, Bearer, revogação, downgrade, JWT/JWKS, CORS e readiness.
+- Ruff check/formato, mypy, lock e wheel/sdist aprovados. A documentação de
+  [arquitetura](architecture.md) acompanha o pacote fonte; artefatos privados
+  continuam ignorados e excluídos dos pacotes.
+- A interface Python interna de `StoriesService` recebe `ProjectContext` em vez
+  de UUIDs soltos para que a autorização também ocorra fora das rotas. Os testes
+  internos foram adaptados; endpoints, payloads, status e schema permanecem iguais.
+
+Não foram executados PostgreSQL, Docker, deploy ou integração entre quatro
+repositórios nesta rodada isolada do Backlog. Nenhum banco remoto foi acessado;
+nenhum push, merge ou mudança de configuração publicada foi realizado. SQLite
+não substitui a conferência de locale/Unicode e transações no PostgreSQL.
+
 ## Colaboração/perfil 0.3.0 — 28/10/2026, somente local
 
 - Suíte completa com PostgreSQL 16.15 descartável em loopback, UTF-8/ICU und:
@@ -107,3 +165,21 @@ prioridades claras e progresso persistente, com acesso restrito.
 Equipes/RBAC, tarefas/sprints, estimativas e edição/exclusão de textos não fazem parte
 deste MVP. JWT já emitido pode continuar válido até expirar após desativação/logout.
 Readiness comprova só a tabela própria. Essas limitações acompanham a demonstração.
+
+## Integração coordenada das camadas — 30/10/2026
+
+- Revisão independente das mudanças de Identidade, Projetos, Backlog e Frontend
+  não encontrou regressão funcional ou de segurança nos caminhos inspecionados.
+  A lacuna de testes sem DOM do frontend foi corrigida com Worker e verificação
+  negativa das fronteiras; a suíte final de navegador passou 124 testes sem skips.
+- A suíte usa os três backends reais refatorados, SQLite/RSA temporários e os
+  caminhos AUTH_BACKEND_PATH, PROJECTS_BACKEND_PATH e BACKLOG_BACKEND_PATH.
+  Inclui login, perfil, projetos, backlog, convite, promoção de papel e remoção.
+- O teste HTTP específico Projetos→Backlog passou com BACKLOG_SERVICE_PATH
+  configurado. Não se presume teste de PostgreSQL a partir desse resultado.
+- O ambiente local persistente foi reiniciado com os mesmos bancos e chave:
+  readiness 200 nas três APIs, CORS 127.0.0.1:5173, login da conta de teste
+  preservada e consulta de projetos 200 pelo navegador, sem erro JavaScript.
+- Nenhum banco remoto, grant, configuração Azure, deploy ou dado de produção
+  foi alterado. A integração PostgreSQL opt-in continua pendente nesta etapa.
+- Componentes e limites das camadas estão em [architecture.md](architecture.md).

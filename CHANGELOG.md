@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0 — preparação de release, 2026-11-01
+
+### Added
+
+- Itens tipados, épicos e tarefas com hierarquia, histórias guiadas, MoSCoW, estimativas e responsáveis validados em Projetos.
+- Histórico transacional, dependências sem ciclos, bloqueios, quadro e reordenação com controle de versão.
+- Recomendações com contexto autorizado e aprovação humana transacional/idempotente. IA real permanece desabilitada; testes sintéticos não validam provedor externo.
+- Adaptador proposto de eventos de revisão com autenticação e idempotência, desabilitado por padrão. Contrato do produtor externo continua pendente; não há compatibilidade real presumida.
+
+### Changed
+
+- Arquitetura multicamadas, schema exclusivo, sessão online na Identidade, autorização Projetos `/access/v2` por padrão e leases antes de cada escrita.
+- Ciclo de vida de Projetos bloqueia mutações; resumo de todo conteúdo próprio participa da exclusão segura, incluindo recomendações e eventos.
+- `/stories` preservado; novas escritas avançam versões e registram histórico. Compatibilidade v1 é opt-in explícito, sem fallback automático. Requer Projetos 0.5.0 e Identidade 0.4.0 com sessão online.
+- Migração aditiva explícita por `init`, sem DDL no startup e sem apagar dados. Veja [contrato atual](docs/integration.md) e [migração/rollback](docs/backlog-items.md).
+- Evolução MINOR pré-1.0 por novas funcionalidades e mudanças de contrato. A preparação não comprova publicação, deploy ou integração externa.
+
 ## Unreleased — 0.3.0
 
 - Autorização canônica por `/projects/{id}/access`, com IDs, papéis e permissões coerentes.

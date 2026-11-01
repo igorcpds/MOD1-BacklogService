@@ -3,6 +3,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from isolated_control import IsolatedWriteControl
 from sqlalchemy import event
 from sqlalchemy.exc import OperationalError
 
@@ -27,7 +28,9 @@ def client(issuer, project_id, access_payload):
 
     upstream = httpx.Client(transport=httpx.MockTransport(projects))
     app = create_app(
-        issuer["settings"], project_access=ProjectAccess(upstream, "http://127.0.0.1:8001")
+        issuer["settings"],
+        project_access=ProjectAccess(upstream, "http://127.0.0.1:8001", legacy_access=True),
+        write_control=IsolatedWriteControl(),
     )
     app.state.test_projects = state
     init_schema(app.state.engine, "backlog")
@@ -367,3 +370,39 @@ def test_role_downgrade_is_effective_on_next_write(client, issuer, project_id, a
     assert response.status_code == 200
     assert response.json()["title"] == "Original"
     assert response.json()["status"] == "done"
+
+
+@pytest.mark.parametrize("failure", ["timeout", "invalid-contract"])
+def test_upstream_failure_precedes_all_story_reads_and_writes(
+    client, issuer, project_id, monkeypatch, failure
+):
+    def projects(request):
+        if failure == "timeout":
+            raise httpx.ReadTimeout("private upstream detail", request=request)
+        return httpx.Response(200, json={"permissions": ["backlog:read"]})
+
+    statements = []
+
+    def record(connection, cursor, statement, parameters, execution_context, many):
+        statements.append(statement)
+
+    engine = client.app.state.engine
+    event.listen(engine, "before_cursor_execute", record)
+    try:
+        with httpx.Client(transport=httpx.MockTransport(projects)) as upstream:
+            monkeypatch.setattr(client.app.state.project_access, "client", upstream)
+            url = f"/projects/{project_id}/stories"
+            for method, suffix, data in [
+                ("GET", "", None),
+                ("GET", f"/{uuid4()}", None),
+                ("POST", "", {"title": "Forbidden"}),
+                ("PATCH", f"/{uuid4()}", {"status": "done"}),
+                ("PATCH", f"/{uuid4()}", {"title": "Forbidden"}),
+            ]:
+                response = client.request(method, url + suffix, headers=headers(issuer), json=data)
+                assert response.status_code == 503
+                assert response.json() == {"detail": "Service temporarily unavailable"}
+                assert response.headers["cache-control"] == "no-store"
+    finally:
+        event.remove(engine, "before_cursor_execute", record)
+    assert statements == []

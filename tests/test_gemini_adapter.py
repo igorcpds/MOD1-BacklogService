@@ -128,6 +128,31 @@ def test_gemini_request_is_structured_portuguese_and_excludes_foreign_credential
     assert request.extensions["timeout"]["read"] == 30
 
 
+def test_gemini_does_not_inherit_client_auth_cookies_or_query_parameters():
+    adapter = importlib.import_module("backlog_service.gemini_adapter").GeminiProposalProvider
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200, json=envelope())
+
+    with httpx.Client(
+        transport=httpx.MockTransport(respond),
+        headers={"Authorization": "Bearer synthetic-user-token"},
+        auth=httpx.BasicAuth("synthetic-user", "synthetic-password"),
+        cookies={"session": "synthetic-session"},
+        params={"token": "synthetic-query-token"},
+        trust_env=False,
+    ) as client:
+        assert adapter(client, configured()).generate("initial_backlog", CONTEXT) == PROPOSAL
+    assert len(requests) == 1
+    assert "authorization" not in requests[0].headers
+    assert "cookie" not in requests[0].headers
+    assert not requests[0].url.query
+    assert requests[0].headers["x-goog-api-key"] == "synthetic-only-key"
+    assert requests[0].extensions["timeout"]["read"] == 30
+
+
 def test_gemini_accepts_empty_and_ignores_thought_text():
     expected = {**PROPOSAL, "suggestions": []}
     result = envelope(expected)

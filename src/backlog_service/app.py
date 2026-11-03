@@ -18,6 +18,7 @@ from backlog_service.domain import (
     InsufficientProjectPermissions,
     MissingItem,
 )
+from backlog_service.gemini_adapter import GeminiProposalProvider
 from backlog_service.identity_status import IdentityStatusClient
 from backlog_service.item_routes import router as item_router
 from backlog_service.item_service import WriteControl
@@ -58,7 +59,11 @@ def create_app(
                 client.close()
 
     app = FastAPI(title="Módulo 1 — Backlog", version=version("backlog-service"), lifespan=lifespan)
-    app.state.ai_provider = ai_provider or HTTPProposalProvider(client, settings)
+    app.state.ai_provider = ai_provider or (
+        GeminiProposalProvider(client, settings)
+        if settings.ai_provider == "gemini"
+        else HTTPProposalProvider(client, settings)
+    )
     app.state.settings = settings
     app.state.identity_status = identity_status or IdentityStatusClient(
         client, settings.auth_api_base_url

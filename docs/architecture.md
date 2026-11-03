@@ -11,7 +11,7 @@ com o mesmo Bearer autorizado, sem joins ou FKs entre schemas.
 | Aplicação | `service.py`, `item_service.py`, `recommendation_service.py`, `review_service.py` | Casos de uso, direitos por ação, coordenação transacional/leases, DAG, versões e aprovação humana |
 | Domínio | `domain.py` | Contextos, valores, tipos, validações e erros, sem HTTP/banco/configuração |
 | Infraestrutura | `repository.py`, `item_repository.py`, `models.py`, `database.py` | SQL, locks/transações, migração explícita, ORM e persistência no schema próprio |
-| Infraestrutura de integração | `security.py`, `identity_status.py`, `project_access.py`, `project_source.py`, `ai_provider.py`, `review_auth.py`, `config.py` | JWT/JWKS, estado online, APIs autorizadas, provider configurável e credencial de integração |
+| Infraestrutura de integração | `security.py`, `identity_status.py`, `project_access.py`, `project_source.py`, `ai_provider.py`, `gemini_adapter.py`, `review_auth.py`, `config.py` | JWT/JWKS, estado online, APIs autorizadas, provider configurável e credencial de integração |
 | Composição | `app.py`, `dependencies.py`, `cli.py` | Montagem de clientes, sessões, repositórios, serviços e tradução de erros HTTP |
 
 Serviços de aplicação usam repositórios concretos e dados de domínio; não importam
@@ -59,7 +59,11 @@ Responsáveis indisponíveis permanecem atribuídos e são sinalizados nas leitu
 Recomendações usam projeto autorizado e itens reais; propostas são persistidas e
 aprovadas por pessoas antes de criar histórias. Revalidação de contexto, permissões
 e versão impede aplicação silenciosa de rascunho antigo. Provider é configurável,
-desabilitado por padrão; saída simulada é identificada. O adaptador de revisão é
+desabilitado por padrão; saída simulada é identificada. Gemini é selecionado
+explicitamente na composição, com transporte na infraestrutura e proposta
+estruturada validada pelo domínio/aplicação. Propostas vazias podem ser consultadas
+e rejeitadas; aprovação vazia retorna 409 sem aplicação. Veja [Gemini](gemini.md).
+O adaptador de revisão é
 uma proposta local com autenticação dupla e sem semântica de eventos padrão.
 
 Startup não executa DDL. `backlog-service init` cria tabelas faltantes e aplica

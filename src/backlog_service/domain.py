@@ -282,7 +282,7 @@ class GeneratedProposal(BaseModel):
     summary: str = Field(min_length=1, max_length=2000)
     justification: str = Field(min_length=1, max_length=4000)
     evidence: list[str] = Field(min_length=1, max_length=50)
-    suggestions: list[SuggestedStory] = Field(min_length=1, max_length=50)
+    suggestions: list[SuggestedStory] = Field(max_length=50)
 
     @field_validator("evidence")
     @classmethod

@@ -177,6 +177,62 @@ def test_http_recommendation_disabled_then_human_approval(expanded_client, proje
     assert state["committed_at_release"] == 1
 
 
+def test_http_empty_gemini_proposal_has_metadata_and_approval_conflicts(
+    expanded_client, project_id
+):
+    from test_gemini_adapter import PROPOSAL, envelope, provider
+
+    client, state, headers = expanded_client
+    client.app.state.ai_provider = provider(
+        lambda _: httpx.Response(200, json=envelope({**PROPOSAL, "suggestions": []}))
+    )
+    base = f"/projects/{project_id}"
+    url = base + "/recommendations"
+    generated = client.post(url, json={"kind": "initial_backlog"}, headers=headers)
+    assert generated.status_code == 201, generated.text
+    rec = generated.json()
+    assert rec["suggestions"] == [] and rec["applied_item_ids"] == []
+    assert (rec["provider"], rec["model"], rec["simulated"]) == (
+        "gemini",
+        "gemini-3.5-flash-lite",
+        False,
+    )
+    before = client.get(base + "/content-summary", headers=headers).json()
+    board = client.get(base + "/board", headers=headers).json()
+    denied = client.post(
+        url + "/" + rec["id"] + "/approve", json={"expected_version": 1}, headers=headers
+    )
+    assert denied.status_code == 409
+    assert client.get(url + "/" + rec["id"], headers=headers).json() == rec
+    assert client.get(base + "/content-summary", headers=headers).json() == before
+    assert client.get(base + "/board", headers=headers).json() == board
+    assert state["committed_at_release"] == 0
+
+
+@pytest.mark.parametrize("status", [302, 429, 500])
+def test_http_gemini_failure_does_not_persist_any_proposal(expanded_client, project_id, status):
+    from test_gemini_adapter import provider
+
+    client, state, headers = expanded_client
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(status, headers={"Location": "http://127.0.0.1:1"})
+
+    client.app.state.ai_provider = provider(respond)
+    base = f"/projects/{project_id}"
+    before = client.get(base + "/content-summary", headers=headers).json()
+    result = client.post(
+        base + "/recommendations", json={"kind": "initial_backlog"}, headers=headers
+    )
+    assert result.status_code == 503 and "synthetic-only-key" not in result.text
+    assert len(calls) == 1 and "authorization" not in calls[0].headers
+    assert client.get(base + "/content-summary", headers=headers).json() == before
+    assert client.get(base + "/recommendations", headers=headers).json()["total"] == 0
+    assert state["leases"] == []
+
+
 def test_http_unavailable_assignee_survives_status_change_and_unknown_read(
     expanded_client, project_id
 ):

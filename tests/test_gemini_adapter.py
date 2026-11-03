@@ -230,6 +230,26 @@ def test_gemini_rejects_malformed_thought_marker():
         provider(lambda _: httpx.Response(200, json=result)).generate("initial_backlog", CONTEXT)
 
 
+@pytest.mark.parametrize("nested_location", ["envelope", "proposal"])
+def test_gemini_deep_json_is_sanitized_without_retry(nested_location):
+    nested = "[" * 4000 + "0" + "]" * 4000
+    if nested_location == "envelope":
+        body = nested.encode()
+    else:
+        result = envelope()
+        result["candidates"][0]["content"]["parts"][0]["text"] = nested
+        body = json.dumps(result).encode()
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(200, content=body)
+
+    with pytest.raises(DependencyUnavailable, match="unavailable or invalid"):
+        provider(respond).generate("initial_backlog", CONTEXT)
+    assert len(calls) == 1
+
+
 def test_app_selects_gemini_explicitly_and_keeps_generic_default(settings):
     from backlog_service.ai_provider import HTTPProposalProvider
     from backlog_service.app import create_app

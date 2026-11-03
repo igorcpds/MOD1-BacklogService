@@ -130,7 +130,7 @@ class GeminiProposalProvider:
             result = self._parse(json.loads(body, parse_constant=reject_nonfinite))
             GeneratedProposal.model_validate(result)
             return result
-        except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError):
+        except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError, RecursionError):
             raise DependencyUnavailable("Recommendation provider unavailable or invalid") from None
 
     @staticmethod

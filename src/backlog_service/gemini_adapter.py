@@ -1,9 +1,10 @@
 """Bounded Gemini REST infrastructure; proposals never execute provider actions."""
 
 import json
-from typing import Any
+from typing import Annotated, Any, Literal
 
 import httpx
+from pydantic import BaseModel, ConfigDict, Field
 
 from backlog_service.config import Settings
 from backlog_service.domain import DependencyUnavailable, GeneratedProposal
@@ -56,6 +57,31 @@ PROPOSAL_SCHEMA: dict[str, Any] = {
         "suggestions": {"type": "array", "maxItems": 50, "items": STORY_SCHEMA},
     },
 }
+
+
+class GeminiStoryOutput(BaseModel):
+    """Exact provider boundary; broader ItemDraft fields are not Gemini output."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    kind: Literal["story"]
+    title: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2000)
+    acceptance_criteria: str = Field(default="", max_length=2000)
+    priority: Literal["low", "medium", "high"] = "medium"
+    persona: str = Field(default="", max_length=500)
+    action: str = Field(default="", max_length=500)
+    benefit: str = Field(default="", max_length=500)
+    guided: bool = False
+
+
+class GeminiProposalOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    summary: str = Field(min_length=1, max_length=2000)
+    justification: str = Field(min_length=1, max_length=4000)
+    evidence: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(
+        min_length=1, max_length=50
+    )
+    suggestions: list[GeminiStoryOutput] = Field(max_length=50)
 
 
 def reject_nonfinite(value: str) -> None:
@@ -128,6 +154,7 @@ class GeminiProposalProvider:
             finally:
                 response.close()
             result = self._parse(json.loads(body, parse_constant=reject_nonfinite))
+            GeminiProposalOutput.model_validate(result)
             GeneratedProposal.model_validate(result)
             return result
         except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError, RecursionError):

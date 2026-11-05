@@ -233,6 +233,46 @@ def test_http_gemini_failure_does_not_persist_any_proposal(expanded_client, proj
     assert state["leases"] == []
 
 
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"estimate_value": None},
+        {"estimate_unit": None},
+        {"is_blocked": False},
+        {"blocked_reason": "Hidden from review"},
+        {"moscow_priority": "must"},
+        {"assignee_id": None},
+        {"epic_id": None},
+        {"parent_story_id": None},
+        {
+            "estimate_value": "999999",
+            "estimate_unit": "hours",
+            "is_blocked": True,
+            "blocked_reason": "Invented",
+        },
+    ],
+)
+def test_http_gemini_out_of_contract_story_never_persists(expanded_client, project_id, extra):
+    from test_gemini_adapter import PROPOSAL, envelope, provider
+
+    client, state, headers = expanded_client
+    output = {**PROPOSAL, "suggestions": [{**PROPOSAL["suggestions"][0], **extra}]}
+    client.app.state.ai_provider = provider(lambda _: httpx.Response(200, json=envelope(output)))
+    base = f"/projects/{project_id}"
+    before_summary = client.get(base + "/content-summary", headers=headers).json()
+    before_board = client.get(base + "/board", headers=headers).json()
+    result = client.post(
+        base + "/recommendations", json={"kind": "initial_backlog"}, headers=headers
+    )
+    assert result.status_code == 503
+    assert result.json() == {"detail": "Service temporarily unavailable"}
+    assert client.get(base + "/recommendations", headers=headers).json()["total"] == 0
+    assert client.get(base + "/items", headers=headers).json()["total"] == 0
+    assert client.get(base + "/content-summary", headers=headers).json() == before_summary
+    assert client.get(base + "/board", headers=headers).json() == before_board
+    assert state["leases"] == []
+
+
 def test_http_unavailable_assignee_survives_status_change_and_unknown_read(
     expanded_client, project_id
 ):

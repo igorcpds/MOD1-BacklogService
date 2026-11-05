@@ -16,6 +16,24 @@ PROPOSAL = {
     "suggestions": [{"title": "Consultar o portal", "kind": "story"}],
 }
 
+OUT_OF_CONTRACT_STORY_FIELDS = [
+    {"estimate_value": None},
+    {"estimate_unit": None},
+    {"is_blocked": False},
+    {"blocked_reason": "Hidden from the review card"},
+    {"moscow_priority": "must"},
+    {"assignee_id": None},
+    {"epic_id": None},
+    {"parent_story_id": None},
+    {
+        "estimate_value": "999999",
+        "estimate_unit": "hours",
+        "is_blocked": True,
+        "blocked_reason": "Invented",
+    },
+    {"unexpected": {"nested": "value"}},
+]
+
 
 def envelope(proposal=PROPOSAL):
     return {
@@ -160,6 +178,83 @@ def test_gemini_accepts_empty_and_ignores_thought_text():
     assert (
         provider(lambda _: httpx.Response(200, json=result)).generate("initial_backlog", CONTEXT)
         == expected
+    )
+
+
+@pytest.mark.parametrize("extra", OUT_OF_CONTRACT_STORY_FIELDS)
+def test_gemini_rejects_story_fields_outside_advertised_schema(extra):
+    output = {**PROPOSAL, "suggestions": [{**PROPOSAL["suggestions"][0], **extra}]}
+    with pytest.raises(DependencyUnavailable, match="unavailable or invalid"):
+        provider(lambda _: httpx.Response(200, json=envelope(output))).generate(
+            "initial_backlog", CONTEXT
+        )
+
+
+@pytest.mark.parametrize(
+    "story",
+    [
+        {"title": "Required kind is missing"},
+        {"kind": "story", "title": "Story", "guided": 1},
+        {"kind": "story", "title": "Story", "priority": "urgent"},
+        {"kind": "story", "title": "Story", "description": None},
+        {"kind": "story", "title": "Story", "title_extra": {}},
+    ],
+)
+def test_gemini_enforces_required_fields_and_strict_schema_types(story):
+    output = {**PROPOSAL, "suggestions": [story]}
+    with pytest.raises(DependencyUnavailable):
+        provider(lambda _: httpx.Response(200, json=envelope(output))).generate(
+            "initial_backlog", CONTEXT
+        )
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("title", ""),
+        ("title", "x" * 121),
+        ("description", "x" * 2001),
+        ("acceptance_criteria", "x" * 2001),
+        ("persona", "x" * 501),
+        ("action", "x" * 501),
+        ("benefit", "x" * 501),
+    ],
+)
+def test_gemini_enforces_advertised_story_string_bounds(field, value):
+    story = {**PROPOSAL["suggestions"][0], field: value}
+    output = {**PROPOSAL, "suggestions": [story]}
+    with pytest.raises(DependencyUnavailable):
+        provider(lambda _: httpx.Response(200, json=envelope(output))).generate(
+            "initial_backlog", CONTEXT
+        )
+
+
+def test_gemini_rejects_top_level_extra_fields():
+    output = {**PROPOSAL, "unexpected": {"nested": "value"}}
+    with pytest.raises(DependencyUnavailable):
+        provider(lambda _: httpx.Response(200, json=envelope(output))).generate(
+            "initial_backlog", CONTEXT
+        )
+
+
+def test_gemini_preserves_all_valid_story_fields_without_inserting_hidden_defaults():
+    story = {
+        "kind": "story",
+        "title": "Consultar solicitações",
+        "description": "Consulta autenticada",
+        "acceptance_criteria": "Apenas solicitações próprias são exibidas.",
+        "priority": "high",
+        "persona": "cliente",
+        "action": "consultar minhas solicitações",
+        "benefit": "acompanhar o atendimento",
+        "guided": True,
+    }
+    output = {**PROPOSAL, "suggestions": [story]}
+    assert (
+        provider(lambda _: httpx.Response(200, json=envelope(output))).generate(
+            "initial_backlog", CONTEXT
+        )
+        == output
     )
 
 

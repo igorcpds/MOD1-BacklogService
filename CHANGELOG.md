@@ -4,6 +4,7 @@
 
 - Adaptador Gemini REST na infraestrutura, selecionado explicitamente por `AI_PROVIDER=gemini`. O provedor HTTP estruturado continua padrão; sem configuração, geração fica desabilitada.
 - Geração de backlog inicial com JSON estruturado tipado, contexto autorizado de até 64 KiB, resposta de até 256 KiB e metadados `provider=gemini`, modelo configurado e `simulated=false`.
+- Validação estrita da saída Gemini conforme o schema anunciado, incluindo campos obrigatórios, tipos, enums, limites e rejeição de propriedades extras. Estimativas e bloqueios fora desse contrato retornam 503 sem persistência; o provedor HTTP genérico mantém seu contrato existente.
 - Validação de endpoint oficial HTTPS ou HTTP loopback para testes, chave somente no backend e erros sanitizados. Sem redirects, retries, ferramentas ou fallback de modelo.
 - Propostas sem sugestões podem ser consultadas e rejeitadas; aprovação retorna 409 sem criar itens ou alterar a proposta. Aprovação de histórias preserva transação, idempotência e revalidação de contexto.
 - Candidato MINOR pré-1.0 para nova integração e evolução aditiva do contrato de propostas. Sem tag, publicação, merge ou deploy; testes controlados não comprovam disponibilidade, quota ou qualidade do Gemini real. Veja [configuração e validação](docs/gemini.md).

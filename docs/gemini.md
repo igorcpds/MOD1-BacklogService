@@ -36,6 +36,13 @@ histórias tipadas em `suggestions`. Há um candidato por geração. O cliente d
 backend desabilita proxies de ambiente; a chamada não usa Bearer do usuário,
 redirects, ferramentas, pesquisa, retries ou fallback de modelo.
 
+A resposta passa por modelos estritos exclusivos do Gemini, com os mesmos
+campos obrigatórios, tipos, enums e limites do schema anunciado. Campos extras
+são rejeitados na proposta e em cada história, inclusive estimativas, bloqueios
+e referências que existem no contrato mais amplo de itens. Eles não são
+silenciosamente descartados nem persistidos. As regras de domínio são verificadas
+em seguida; o contrato do provedor HTTP genérico continua preservado.
+
 O contexto autorizado tem limite de 64 KiB e a resposta tem limite de 256 KiB.
 Nomes e descrições são tratados como dados não confiáveis, nunca como instruções.
 Evidências só podem citar `project.<campo>` presente ou `items.<UUID>` existente.
@@ -56,6 +63,7 @@ Execute em ambiente isolado, sem configuração de banco remoto:
 
 ```powershell
 uv sync --locked --group dev
+Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
 uv run pytest -q -rs
 uv run ruff check .
 uv run ruff format --check .
@@ -69,6 +77,13 @@ chave ausente e ausência de Bearer. Os testes de recomendações e HTTP verific
 evidências inválidas, ausência de persistência nas falhas, 409 vazio e ausência
 de aplicação antes da aprovação. Guardas AST verificam as fronteiras de camada
 e `trust_env=False` no cliente da composição.
+
+A execução final desta correção registrou **349 testes aprovados e 2 ignorados**
+em 66 segundos. Os dois ignorados exigem PostgreSQL loopback descartável, ausente
+nessa execução; SQLite temporário cobriu a persistência. Ruff, formato e mypy
+passaram. Permanece um aviso de depreciação de Starlette/httpx no TestClient.
+As regressões comprovam 503 sanitizado, nenhuma recomendação ou item gravado e
+quadro/histórico preservados quando o Gemini retorna campos fora do contrato.
 
 Esses testes demonstram o comportamento do código contra respostas controladas.
 Não houve chamada de nuvem nesta implementação. Permanecem pendentes a validação

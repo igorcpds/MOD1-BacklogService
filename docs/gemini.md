@@ -1,6 +1,6 @@
 # Backlog inicial com Gemini
 
-O candidato local 0.5.0 adiciona Gemini na infraestrutura de Backlog. Apresentação,
+A versão 0.5.0 publicada inclui Gemini na infraestrutura de Backlog. Apresentação,
 aplicação e domínio continuam com as mesmas fronteiras descritas em
 [arquitetura](architecture.md). `ProposalProvider` permanece o contrato da aplicação;
 `HTTPProposalProvider` continua disponível e é o padrão. O frontend chama a API
@@ -111,3 +111,12 @@ preservados. Isso não comprova a qualidade geral nem todas as US de IA.
 Referências do contrato: [generateContent](https://ai.google.dev/api/generate-content),
 [modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) e
 [preços e quotas](https://ai.google.dev/gemini-api/docs/pricing).
+
+## Configuração de produção — 15/11/2026
+
+A versão publicada está configurada com `AI_PROVIDER=gemini`,
+`AI_SIMULATED=false` e `GEMINI_MODEL=gemini-3.5-flash-lite`. A chave fica somente
+nos segredos do backend. Chamadas reais dos sete tipos, somando Identidade,
+Projetos e Backlog, retornaram HTTP 200 com contexto sintético autorizado.
+Essa evidência do transporte é separada da validação completa dos fluxos pelo
+navegador e da qualidade de cada cenário. Veja [a entrega publicada](final-delivery.md).

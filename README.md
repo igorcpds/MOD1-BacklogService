@@ -1,18 +1,19 @@
 # MOD1 Backlog Service
 
-## Backlog expandido — 0.4.0 preparado para release
+## Backlog expandido — 0.5.0 publicado em 15/11/2026
 
-Exige Projetos 0.5.0 e Identidade 0.4.0: cada operação valida a sessão online e
+Integração publicada com Projetos 0.6.0 e Identidade 0.5.0: cada operação valida a sessão online e
 consulta `/projects/{id}/access/v2` com o mesmo Bearer. Papéis personalizados e
 concessões por equipes participam das permissões. Mutações respeitam o ciclo de
 vida e usam leases duráveis. 403 mantém a sessão; revogação e expiração afetam
-novas verificações. Migração explícita é necessária antes do novo runtime.
-[Contrato de integração](docs/integration.md).
+novas verificações. Migração explícita é necessária antes do runtime em novas
+instalações; produção já foi preparada e publicada.
+[Contrato de integração](docs/integration.md) e [registro de entrega](docs/final-delivery.md).
 
 Organização do serviço, dependências e fluxos de autorização:
 [arquitetura multicamadas](docs/architecture.md).
 
-Serviço `0.4.0` de histórias por projeto: registrar necessidades e critérios de aceite,
+Serviço `0.5.0` de histórias por projeto: registrar necessidades e critérios de aceite,
 priorizar entregas e acompanhar o progresso. O usuário entra pelo serviço de
 identidade e acessa apenas projetos autorizados pelo serviço de projetos.
 
@@ -105,12 +106,12 @@ UUID exato. `%` e `_` são literais; filtros combinam AND antes de total/pagina�
 `/items` e reordenação oferecem controle de versão; o PATCH legado de `/stories`
 continua sem `expected_version`. A migração aditiva preserva IDs e dados.
 Logout/desativação são observados pela verificação online de sessão, habilitada
-por padrão. [CHANGELOG.md](CHANGELOG.md) registra a release preparada; esta
-documentação não comprova publicação ou deploy.
+por padrão. [CHANGELOG.md](CHANGELOG.md) registra a evolução e o
+[registro de entrega](docs/final-delivery.md) identifica o deploy publicado.
 
 ## Contratos do backlog expandido
 
-A implementação local mantém `/stories` e acrescenta itens tipados, épicos,
+A implementação publicada mantém `/stories` e acrescenta itens tipados, épicos,
 tarefas, histórico, dependências, quadro e reordenação versionada. Identidade
 online e autorização Projects access/v2 são exigidas por padrão; mutações usam
 leases duráveis de Projetos. Execute `backlog-service init` explicitamente para
@@ -119,9 +120,11 @@ migrações aditivas antes do novo runtime; startup não faz DDL.
 Contratos e limites: [itens e migração](docs/backlog-items.md),
 [recomendações aprovadas por pessoas](docs/recommendations.md) e
 [proposta local de eventos de revisão](docs/code-review-proposal.md).
-IA real e eventos de revisão permanecem desabilitados. O adaptador de revisão
-depende de contrato explícito com o produtor antes de qualquer habilitação.
-Provider real de IA e integração do produtor externo permanecem com validação
-pendente; transportes sintéticos locais não são evidência de integração externa.
+Gemini real está configurado em produção com `gemini-3.5-flash-lite`,
+`AI_PROVIDER=gemini` e `AI_SIMULATED=false`. A geração real de backlog inicial
+foi validada com dados sintéticos; a validação completa dos fluxos de IA continua
+por cenário. [Configuração e limites](docs/gemini.md).
+Eventos de revisão de código (US-096) permanecem desabilitados: contrato,
+produtor e mapeamento externos ainda precisam ser acordados.
 
-Integração optativa: [notificações para o Módulo 6](docs/module6-notifications.md), com fila persistente e worker próprio.
+Integração ativa em produção: [notificações para o Módulo 6](docs/module6-notifications.md), com fila persistente, worker próprio e `source=backlog`. Sem replay histórico ou avisos globais.

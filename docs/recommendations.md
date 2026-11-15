@@ -23,10 +23,13 @@ da decisão. Repetição da mesma aprovação retorna o resultado sem duplicar i
 Mudança de fonte torna o rascunho expirado e retorna 409; rejeição não cria itens.
 Rascunhos e eventos contam como conteúdo relevante no protocolo de exclusão.
 
-## Adaptador proposto de IA
+## Provedores de IA
 
-Padrão desabilitado: configure `AI_BASE_URL` e `AI_MODEL` apenas no backend para
-habilitar. `AI_API_KEY` opcional vai somente no header Bearer para o provedor;
+Produção usa o [adaptador Gemini](gemini.md), com `AI_PROVIDER=gemini`,
+`AI_SIMULATED=false` e `GEMINI_MODEL=gemini-3.5-flash-lite`. A chamada real de
+geração inicial foi validada com dados sintéticos; qualidade geral e fluxos
+completos exigem validação própria. O provedor HTTP genérico continua disponível:
+sem configuração, não gera; configure `AI_BASE_URL` e `AI_MODEL` só no backend. `AI_API_KEY` opcional vai somente no header Bearer para o provedor;
 nunca é emitida pela API do produto. Base HTTPS confiável ou HTTP loopback;
 sem redirects ou retry automático. `AI_TIMEOUT_SECONDS=30` (1–60), resposta
 máxima 256 KiB. Erros preservam o trabalho e retornam 503, sem sucesso fictício.
@@ -47,8 +50,9 @@ Resposta esperada:
 Campos desconhecidos, limites excessivos e sugestões inválidas são recusados.
 `AI_SIMULATED=true` só é permitido com URL loopback e o resultado é identificado
 como simulado. Os testes usam transporte HTTP controlado/saída sintética, não
-um LLM real. Provider de produção e qualidade de recomendações continuam com
-validação externa pendente; testes locais não substituem essa etapa.
+um LLM real. Essa limitação dos testes controlados é distinta da chamada Gemini
+real registrada em [gemini.md](gemini.md); nenhuma das duas garante qualidade
+de todas as recomendações futuras.
 
 Execute `backlog-service init` explicitamente para criar tabelas de recomendações
 e eventos antes do novo runtime. O comando é idempotente; startup não migra.

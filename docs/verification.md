@@ -1,5 +1,11 @@
 # Validação do backlog
 
+## Estado publicado — 15/11/2026
+
+O [registro de entrega](final-delivery.md) reúne versões, execuções de deploy e
+limites atuais. As seções datadas abaixo preservam a validação histórica de
+cada etapa e não descrevem, isoladamente, a produção atual.
+
 ## Itens, recomendações e proposta de revisão — 31/10/2026, somente local
 
 - `uv run pytest -q --tb=short` com PostgreSQL descartável loopback, schemas aleatórios

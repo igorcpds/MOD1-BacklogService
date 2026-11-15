@@ -1,12 +1,14 @@
-# Contrato — backlog 0.4.0
+# Contrato — backlog 0.5.0
 
 Contrato atual: [itens, quadro, permissões e migração](backlog-items.md),
 [recomendações com aprovação humana](recommendations.md) e
-[adaptador proposto de revisão](code-review-proposal.md). IA real permanece
-desabilitada; revisão externa depende de contrato ainda não acordado e também
-permanece desabilitada. Release preparada sem comprovação de deploy.
+[adaptador proposto de revisão](code-review-proposal.md). Gemini real está
+configurado em produção; [chamadas reais e limites](gemini.md).
+Revisão externa (US-096) permanece desabilitada porque o contrato do produtor
+ainda não foi acordado. A versão 0.5.0 foi publicada em 15/11/2026;
+[registro de entrega](final-delivery.md).
 
-Requer Identidade 0.4.0 e Projetos 0.5.0. Em relação a 0.3.0, sessão é consultada
+A instalação publicada integra Identidade 0.5.0 e Projetos 0.6.0. Em relação a 0.3.0, sessão é consultada
 online por padrão, `/access/v2` substitui v1 e mutações exigem lease de escrita.
 Compatibilidade v1 é opt-in explícito, nunca fallback automático. Novas tabelas e
 colunas exigem `backlog-service init` administrativo explícito antes do runtime.

@@ -42,6 +42,7 @@ def imported_modules(tree):
                 "backlog_service.dependencies",
                 "backlog_service.app",
                 "backlog_service.cli",
+                "backlog_service.gemini_adapter",
             },
         ),
         ("service", {"fastapi", "starlette", "sqlalchemy", "backlog_service.models"}),
@@ -76,10 +77,54 @@ def test_application_services_do_not_access_orm_session(module):
     tree = ast.parse((SOURCE / f"{module}.py").read_text(encoding="utf-8"))
     imports = set(imported_modules(tree))
     assert not any(
-        name.startswith(("fastapi", "sqlalchemy", "backlog_service.models")) for name in imports
+        name.startswith(
+            (
+                "fastapi",
+                "sqlalchemy",
+                "httpx",
+                "backlog_service.models",
+                "backlog_service.gemini_adapter",
+                "backlog_service.ai_provider",
+            )
+        )
+        for name in imports
     )
     assert not any(
         isinstance(node, ast.Attribute) and node.attr == "session" for node in ast.walk(tree)
+    )
+
+
+def test_gemini_remains_infrastructure_and_http_client_disables_proxies():
+    tree = ast.parse((SOURCE / "gemini_adapter.py").read_text(encoding="utf-8"))
+    assert not any(
+        name.startswith(
+            (
+                "fastapi",
+                "sqlalchemy",
+                "backlog_service.recommendation_service",
+                "backlog_service.app",
+                "backlog_service.routes",
+            )
+        )
+        for name in imported_modules(tree)
+    )
+    app = ast.parse((SOURCE / "app.py").read_text(encoding="utf-8"))
+    clients = [
+        node
+        for node in ast.walk(app)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "Client"
+    ]
+    assert clients
+    assert all(
+        any(
+            keyword.arg == "trust_env"
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is False
+            for keyword in node.keywords
+        )
+        for node in clients
     )
 
 

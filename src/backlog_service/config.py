@@ -1,4 +1,5 @@
 import re
+from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -13,6 +14,28 @@ LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
+
+    module6_enabled: bool = False
+    module6_endpoint: str = "https://software6-bff-2-cnbqhhgdcndzgwdx.chilecentral-01.azurewebsites.net/api/integrations/notifications"
+    module6_key: SecretStr | None = Field(default=None, repr=False, min_length=1, max_length=512)
+    module6_source: Literal["backlog"] = "backlog"
+
+    @field_validator("module6_endpoint")
+    @classmethod
+    def validate_module6_endpoint(cls, value: str) -> str:
+        from backlog_service.module6_client import trusted_endpoint
+
+        return trusted_endpoint(value)
+
+    @model_validator(mode="after")
+    def module6_configured(self) -> "Settings":
+        if self.module6_enabled and (self.module6_key is None or self.module6_source is None):
+            raise ValueError("Module 6 enabled requires private key and agreed source")
+        if self.module6_key and any(
+            ord(char) < 33 or ord(char) > 126 for char in self.module6_key.get_secret_value()
+        ):
+            raise ValueError("Invalid Module 6 integration key")
+        return self
 
     database_url: SecretStr = Field(repr=False)
     database_schema: str = Field(default="backlog", pattern=r"^[a-z_][a-z0-9_]*$")
@@ -37,11 +60,48 @@ class Settings(BaseSettings):
             raise ValueError("Invalid code review event mapping")
         return value
 
+    ai_provider: Literal["structured-http", "gemini"] = "structured-http"
     ai_base_url: str | None = None
     ai_model: str = Field(default="", max_length=200)
     ai_api_key: SecretStr | None = Field(default=None, repr=False)
     ai_simulated: bool = False
     ai_timeout_seconds: int = Field(default=30, ge=1, le=60)
+    gemini_api_key: SecretStr | None = Field(default=None, repr=False)
+    gemini_model: str = Field(
+        default="gemini-3.5-flash-lite", pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+    )
+    gemini_timeout_seconds: int = Field(default=30, ge=1, le=30)
+    gemini_max_output_tokens: int = Field(default=4096, ge=256, le=8192)
+    gemini_api_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
+
+    @field_validator("gemini_api_base_url")
+    @classmethod
+    def trusted_gemini_url(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        port = parsed.port
+        if (
+            parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+            or "?" in value
+            or "#" in value
+            or "\\" in value
+            or "%" in parsed.path
+            or any(segment in {".", ".."} for segment in parsed.path.split("/"))
+            or any(ord(char) <= 32 or ord(char) == 127 for char in value)
+        ):
+            raise ValueError("Configure trusted Gemini HTTPS or HTTP loopback URL")
+        official = (
+            parsed.scheme == "https"
+            and parsed.hostname == "generativelanguage.googleapis.com"
+            and port in {None, 443}
+            and parsed.path.rstrip("/") == "/v1beta"
+        )
+        local = parsed.scheme == "http" and parsed.hostname in LOOPBACK
+        if not (official or local):
+            raise ValueError("Configure trusted Gemini HTTPS or HTTP loopback URL")
+        return value.rstrip("/")
 
     @field_validator("ai_base_url")
     @classmethod
@@ -50,6 +110,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def simulated_only_loopback(self) -> "Settings":
+        if self.ai_provider == "gemini" and self.ai_simulated:
+            raise ValueError("Gemini cannot be configured as simulated")
         if self.ai_simulated and (
             not self.ai_base_url or urlsplit(self.ai_base_url).hostname not in LOOPBACK
         ):

@@ -39,7 +39,11 @@ def create_database_engine(settings: Settings) -> Engine:
             hide_parameters=True,
         )
         target = settings.database_schema
-    return engine.execution_options(schema_translate_map={"backlog": target})
+    return engine.execution_options(
+        schema_translate_map={"backlog": target},
+        module6_enabled=settings.module6_enabled,
+        module6_source=settings.module6_source,
+    )
 
 
 def init_schema(engine: Engine, schema: str) -> None:
@@ -82,3 +86,6 @@ def migrate_schema(engine: Engine, schema: str) -> None:
                     .values(position=position)
                 )
                 positions[project] = position + 1
+        Base.metadata.tables["backlog.module6_notification_outbox"].create(
+            connection, checkfirst=True
+        )

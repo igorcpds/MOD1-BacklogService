@@ -155,6 +155,8 @@ class RecommendationsService:
             if rec.status != "pending" or rec.version != expected_version:
                 raise Conflict("Recommendation version conflict")
             if approve:
+                if not rec.suggestions:
+                    raise Conflict("Recommendation has no suggestions to approve")
                 constraints = self.repository.recommendation_constraints(rec.id)
                 if fingerprint(self.context(context, constraints)) != rec.context_version:
                     expired = True

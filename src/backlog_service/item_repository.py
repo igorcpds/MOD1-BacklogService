@@ -19,6 +19,7 @@ from backlog_service.models import (
     ReviewEventRecord,
     StoryRecord,
 )
+from backlog_service.notification_repository import capture
 from backlog_service.repository import StoryRepository
 
 
@@ -107,9 +108,10 @@ class ItemRepository(StoryRepository):
     def audit(
         self, item: Item, actor_id: UUID, action: str, diff: dict[str, Any], now: datetime
     ) -> None:
+        event_id = uuid4()
         self.session.add(
             HistoryRecord(
-                id=uuid4(),
+                id=event_id,
                 project_id=item.project_id,
                 item_id=item.id,
                 actor_id=actor_id,
@@ -118,6 +120,14 @@ class ItemRepository(StoryRepository):
                 created_at=now,
                 diff_json=json.dumps(diff, default=str, ensure_ascii=False),
             )
+        )
+        capture(
+            self.session,
+            event_id,
+            item.project_id,
+            action,
+            {"item_id": str(item.id), "diff": diff},
+            now,
         )
 
     def save_item(

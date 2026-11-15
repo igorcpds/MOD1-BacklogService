@@ -76,7 +76,6 @@ def test_stale_recommendation_expires_and_reject_never_creates(service, project_
     [
         {"evidence": ["users." + str(uuid4())]},
         {"suggestions": [{"title": "Invalid", "assignee_id": str(uuid4())}]},
-        {"suggestions": []},
         {"suggestions": [{"title": "Invalid", "kind": "task"}]},
     ],
 )
@@ -115,3 +114,44 @@ def test_concurrent_approval_creates_suggestions_once(engine, service, project_i
         results = list(pool.map(approve, range(2)))
     assert results[0] == results[1]
     assert service.items(ctx).total == 1
+
+
+def test_empty_proposal_is_readable_rejectable_but_cannot_be_approved(service, project_id):
+    provider = Provider()
+    provider.output["suggestions"] = []
+    recs = RecommendationsService(service, Source(project_id), provider)
+    ctx = context_for(project_id)
+    rec = recs.generate(ctx)
+    assert rec.suggestions == [] and rec.status == "pending"
+    board = service.board(ctx)
+    history = service.content_summary(ctx)
+    with pytest.raises(Conflict, match="no suggestions"):
+        recs.decide(ctx, rec.id, 1, approve=True)
+    assert service.items(ctx).total == 0
+    assert service.board(ctx) == board
+    assert service.content_summary(ctx) == history
+    assert recs.get(ctx, rec.id) == rec
+    assert recs.decide(ctx, rec.id, 1, approve=False).status == "rejected"
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"evidence": ["project.invented"]},
+        {"evidence": ["items." + str(uuid4())]},
+        {"suggestions": [{"title": "Bad", "epic_id": str(uuid4())}]},
+    ],
+)
+def test_gemini_invented_references_leave_no_proposal_or_items(service, project_id, change):
+    import httpx
+    from test_gemini_adapter import PROPOSAL, envelope, provider
+
+    ai = provider(lambda _: httpx.Response(200, json=envelope({**PROPOSAL, **change})))
+    recs = RecommendationsService(service, Source(project_id), ai)
+    ctx = context_for(project_id)
+    before = service.content_summary(ctx)
+    with pytest.raises(DependencyUnavailable):
+        recs.generate(ctx)
+    assert recs.list(ctx)["total"] == 0
+    assert service.items(ctx).total == 0
+    assert service.content_summary(ctx) == before

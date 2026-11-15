@@ -123,3 +123,5 @@ IA real e eventos de revisão permanecem desabilitados. O adaptador de revisão
 depende de contrato explícito com o produtor antes de qualquer habilitação.
 Provider real de IA e integração do produtor externo permanecem com validação
 pendente; transportes sintéticos locais não são evidência de integração externa.
+
+Integração optativa: [notificações para o Módulo 6](docs/module6-notifications.md), com fila persistente e worker próprio.

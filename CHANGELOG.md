@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0 — 2026-11-15
+
+- Atualiza opentelemetry-api para 1.45.2 no lock, corrigindo GHSA-mf5v-w3w3-f6cg.
+- Captura transacional de eventos confirmados em fila externa persistente, com o UUID do histórico/evento e schema exclusivo.
+- Worker optativo com consulta de estado, lotes limitados, prazo total de envio, leases e recuperação conservadora de resultados incertos.
+- Chave somente no backend, sem encaminhar Bearer; ativação e migração explícitas. Publicação por pipeline incremental; ativação externa segue os limites documentados.
+- Contrato, catálogo de eventos e operação em [notificações do Módulo 6](docs/module6-notifications.md).
+
+### Gemini
+
+- Adaptador Gemini REST na infraestrutura, selecionado explicitamente por `AI_PROVIDER=gemini`. O provedor HTTP estruturado continua padrão; sem configuração, geração fica desabilitada.
+- Geração de backlog inicial com JSON estruturado tipado, contexto autorizado de até 64 KiB, resposta de até 256 KiB e metadados `provider=gemini`, modelo configurado e `simulated=false`.
+- Validação estrita da saída Gemini conforme o schema anunciado, incluindo campos obrigatórios, tipos, enums, limites e rejeição de propriedades extras. Estimativas e bloqueios fora desse contrato retornam 503 sem persistência; o provedor HTTP genérico mantém seu contrato existente.
+- Validação de endpoint oficial HTTPS ou HTTP loopback para testes, chave somente no backend e erros sanitizados. Sem redirects, retries, ferramentas ou fallback de modelo.
+- Propostas sem sugestões podem ser consultadas e rejeitadas; aprovação retorna 409 sem criar itens ou alterar a proposta. Aprovação de histórias preserva transação, idempotência e revalidação de contexto.
+- Candidato MINOR pré-1.0 para nova integração e evolução aditiva do contrato de propostas. Chamadas reais do adaptador foram verificadas; disponibilidade, quota e qualidade devem ser observadas por cenário. Veja [configuração e validação](docs/gemini.md).
+
 ## 0.4.0 — preparação de release, 2026-11-01
 
 ### Added

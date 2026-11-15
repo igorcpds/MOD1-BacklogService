@@ -15,6 +15,28 @@ LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
+    module6_enabled: bool = False
+    module6_endpoint: str = "https://software6-bff-2-cnbqhhgdcndzgwdx.chilecentral-01.azurewebsites.net/api/integrations/notifications"
+    module6_key: SecretStr | None = Field(default=None, repr=False, min_length=1, max_length=512)
+    module6_source: Literal["backlog"] = "backlog"
+
+    @field_validator("module6_endpoint")
+    @classmethod
+    def validate_module6_endpoint(cls, value: str) -> str:
+        from backlog_service.module6_client import trusted_endpoint
+
+        return trusted_endpoint(value)
+
+    @model_validator(mode="after")
+    def module6_configured(self) -> "Settings":
+        if self.module6_enabled and (self.module6_key is None or self.module6_source is None):
+            raise ValueError("Module 6 enabled requires private key and agreed source")
+        if self.module6_key and any(
+            ord(char) < 33 or ord(char) > 126 for char in self.module6_key.get_secret_value()
+        ):
+            raise ValueError("Invalid Module 6 integration key")
+        return self
+
     database_url: SecretStr = Field(repr=False)
     database_schema: str = Field(default="backlog", pattern=r"^[a-z_][a-z0-9_]*$")
     jwt_issuer: str = Field(default="mod1-auth-local", min_length=1)

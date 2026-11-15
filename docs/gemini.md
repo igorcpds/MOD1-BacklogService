@@ -86,11 +86,27 @@ As regressões comprovam 503 sanitizado, nenhuma recomendação ou item gravado 
 quadro/histórico preservados quando o Gemini retorna campos fora do contrato.
 
 Esses testes demonstram o comportamento do código contra respostas controladas.
-Não houve chamada de nuvem nesta implementação. Permanecem pendentes a validação
-com chave e projeto autorizados, disponibilidade do modelo, quota e qualidade
-das histórias reais. O plano do projeto Gemini determina faturamento e limites;
+A rodada de 05/11 não incluiu chamadas de nuvem; o teste posterior está abaixo.
+Disponibilidade futura, quota e qualidade geral continuam dependendo de validação
+própria. O plano do projeto Gemini determina faturamento e limites;
 o código não promete gratuidade ilimitada nem altera faturamento. Testes
 destrutivos PostgreSQL são opcionais e aceitam somente banco loopback descartável.
+
+## Compatibilidade e chamada real — 14/11/2026
+
+O adaptador copia o schema de geração omitindo somente `maxItems` nos arrays,
+evitando o HTTP 400 observado com o schema limitado de Identidade. O schema
+constante de Backlog não é modificado. A resposta continua validada por
+`GeminiProposalOutput` e `GeneratedProposal`, inclusive o máximo de 50 evidências
+e histórias. Tipos, mínimos, campos permitidos e limites de texto são preservados.
+Os 76 testes Gemini passaram, incluindo o limite de 50 e a rejeição de 51 itens;
+a regressão de requisição falhou antes da correção e passou depois.
+
+Uma chamada real com `gemini-3.5-flash-lite` usou somente a descrição sintética de
+um portal para consultar solicitações próprias. Retornou HTTP 200, uma história
+válida e uma evidência de campo do projeto. Nenhum banco foi aberto, nenhuma
+história foi persistida/aprovada e os processos da demonstração/produção foram
+preservados. Isso não comprova a qualidade geral nem todas as US de IA.
 
 Referências do contrato: [generateContent](https://ai.google.dev/api/generate-content),
 [modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) e

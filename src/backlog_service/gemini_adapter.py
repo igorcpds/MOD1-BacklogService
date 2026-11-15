@@ -84,6 +84,19 @@ class GeminiProposalOutput(BaseModel):
     suggestions: list[GeminiStoryOutput] = Field(max_length=50)
 
 
+def _response_schema(value: Any) -> Any:
+    """Avoid Gemini's bounded-array grammar expansion; validate full limits locally."""
+    if isinstance(value, dict):
+        return {
+            key: _response_schema(child)
+            for key, child in value.items()
+            if not (key == "maxItems" and value.get("type") == "array")
+        }
+    if isinstance(value, list):
+        return [_response_schema(child) for child in value]
+    return value
+
+
 def reject_nonfinite(value: str) -> None:
     raise ValueError("Invalid JSON number")
 
@@ -128,7 +141,10 @@ class GeminiProposalProvider:
                     "candidateCount": 1,
                     "maxOutputTokens": self.settings.gemini_max_output_tokens,
                     "responseFormat": {
-                        "text": {"mimeType": "APPLICATION_JSON", "schema": PROPOSAL_SCHEMA}
+                        "text": {
+                            "mimeType": "APPLICATION_JSON",
+                            "schema": _response_schema(PROPOSAL_SCHEMA),
+                        }
                     },
                 },
             }

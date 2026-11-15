@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -106,3 +107,21 @@ class ReviewEventRecord(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     body_hash: Mapped[str] = mapped_column(String(64))
     result_json: Mapped[str] = mapped_column(Text)
+
+
+class NotificationDeliveryRecord(Base):
+    """External delivery only; independent of internal per-user notifications."""
+
+    __tablename__ = "module6_notification_outbox"
+    __table_args__ = {"schema": "backlog"}
+    event_id: Mapped[str] = mapped_column(String(140), primary_key=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    attempts: Mapped[int] = mapped_column(default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    lease_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_http_status: Mapped[int | None] = mapped_column(nullable=True)

@@ -53,6 +53,36 @@ def configured(**updates):
     )
 
 
+def test_gemini_avoids_bounded_array_schema_rejected_by_provider():
+    module = importlib.import_module("backlog_service.gemini_adapter")
+
+    def handler(request):
+        schema = json.loads(request.content)["generationConfig"]["responseFormat"]["text"]["schema"]
+        assert '"maxItems"' not in json.dumps(schema)
+        assert schema["properties"]["summary"]["maxLength"] == 2000
+        assert schema["properties"]["evidence"]["minItems"] == 1
+        return httpx.Response(200, json=envelope())
+
+    assert provider(handler).generate("initial_backlog", CONTEXT) == PROPOSAL
+    assert module.PROPOSAL_SCHEMA["properties"]["suggestions"]["maxItems"] == 50
+    assert module.PROPOSAL_SCHEMA["properties"]["evidence"]["maxItems"] == 50
+
+
+@pytest.mark.parametrize("field", ["evidence", "suggestions"])
+@pytest.mark.parametrize("count", [50, 51])
+def test_gemini_keeps_local_array_limits(field, count):
+    value = (
+        "project.description" if field == "evidence" else {"title": "Read portal", "kind": "story"}
+    )
+    payload = {**PROPOSAL, field: [value] * count}
+    adapter = provider(lambda _: httpx.Response(200, json=envelope(payload)))
+    if count == 51:
+        with pytest.raises(DependencyUnavailable):
+            adapter.generate("initial_backlog", CONTEXT)
+    else:
+        assert len(adapter.generate("initial_backlog", CONTEXT)[field]) == count
+
+
 def provider(handler, settings=None, *, foreign_headers=False):
     adapter = importlib.import_module("backlog_service.gemini_adapter").GeminiProposalProvider
     client = httpx.Client(

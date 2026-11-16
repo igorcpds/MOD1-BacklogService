@@ -185,7 +185,10 @@ def test_secret_patch_preserves_native_and_keyvault_secrets():
         helper.build_secret_patch(before, [], {"gemini-api-key": "synthetic"})
 
 
-def test_main_applies_scoped_secrets_before_revision_and_does_not_log_values(monkeypatch, capsys):
+@pytest.mark.parametrize("module4_enabled", [False, True])
+def test_main_applies_scoped_secrets_before_revision_and_does_not_log_values(
+    monkeypatch, capsys, module4_enabled
+):
     from contextlib import contextmanager
 
     helper = module()
@@ -199,6 +202,8 @@ def test_main_applies_scoped_secrets_before_revision_and_does_not_log_values(mon
         "IMAGE_REFERENCE": image("backlog"),
         "GEMINI_API_KEY": "synthetic-private-gemini",
         "MODULE6_KEY": "synthetic-private-module6",
+        "MODULE4_ENABLED": "true" if module4_enabled else "false",
+        "MODULE4_PASSWORD": "synthetic-private-module4",
         "GITHUB_RUN_ID": "123",
         "GITHUB_RUN_ATTEMPT": "1",
     }.items():
@@ -237,11 +242,18 @@ def test_main_applies_scoped_secrets_before_revision_and_does_not_log_values(mon
     monkeypatch.setattr(helper, "urlopen", health)
     helper.main()
     assert [set(p["properties"]) for p in patches] == [{"configuration"}, {"template"}]
+    secrets = {v["name"]: v for v in patches[0]["properties"]["configuration"]["secrets"]}
+    assert ("module4-password" in secrets) == module4_enabled
     result = json.loads(capsys.readouterr().out)
     assert result["ready_revision"] == "mod1-backlog--rel-123-1" and result["notifications_enabled"]
     assert not any(
         value in str(result)
-        for value in ["synthetic-private-gemini", "synthetic-private-module6", "private-native"]
+        for value in [
+            "synthetic-private-gemini",
+            "synthetic-private-module6",
+            "private-native",
+            "synthetic-private-module4",
+        ]
     )
 
 
@@ -286,4 +298,51 @@ def test_multiple_revision_traffic_mode_aborts_before_release_patch():
     with pytest.raises(ValueError, match="single-revision"):
         module().build_runtime_patch(
             before, image("backlog"), service="backlog", enable_notifications=True
+        )
+
+
+def test_module4_credential_is_api_only_and_preserves_other_integrations():
+    before = app()
+    original = copy.deepcopy(before)
+    patch = module().build_runtime_patch(
+        before,
+        image("backlog"),
+        service="backlog",
+        enable_notifications=True,
+        enable_module4=True,
+    )
+    api, worker = patch["properties"]["template"]["containers"]
+    env = {value["name"]: value for value in api["env"]}
+    assert before == original
+    assert env["MODULE4_ENABLED"]["value"] == "true"
+    assert env["MODULE4_USERNAME"]["value"] == "revisor"
+    assert env["MODULE4_PASSWORD"] == {"name": "MODULE4_PASSWORD", "secretRef": "module4-password"}
+    assert env["CODE_REVIEW_ENABLED"]["value"] == "false"
+    assert env["MODULE6_ENABLED"]["value"] == "true"
+    assert env["CORS_ORIGINS"] == original["properties"]["template"]["containers"][0]["env"][2]
+    assert not any(v["name"].startswith("MODULE4_") for v in worker["env"])
+
+
+def test_module4_disabled_has_no_password_env_and_cannot_enable_other_services():
+    before = app()
+    before["properties"]["template"]["containers"][0]["env"].append(
+        {"name": "MODULE4_PASSWORD", "secretRef": "module4-password"}
+    )
+    patch = module().build_runtime_patch(before, image("backlog"), service="backlog")
+    env = {v["name"]: v for v in patch["properties"]["template"]["containers"][0]["env"]}
+    assert env["MODULE4_ENABLED"]["value"] == "false" and "MODULE4_PASSWORD" not in env
+    with pytest.raises(ValueError):
+        module().build_runtime_patch(
+            app(), image("projects"), service="projects", enable_module4=True
+        )
+
+
+def test_module4_deploy_target_cannot_forward_credentials_to_another_host():
+    with pytest.raises(ValueError):
+        module().build_runtime_patch(
+            app(),
+            image("backlog"),
+            service="backlog",
+            enable_module4=True,
+            module4_base_url="https://untrusted.invalid",
         )

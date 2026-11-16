@@ -15,6 +15,37 @@ LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
+    module4_enabled: bool = False
+    module4_base_url: str = (
+        "https://revisor-codigo-ia-gio-ach9dbg3g9ekazf3.chilecentral-01.azurewebsites.net"
+    )
+    module4_username: SecretStr | None = Field(
+        default=None, repr=False, min_length=1, max_length=200
+    )
+    module4_password: SecretStr | None = Field(
+        default=None, repr=False, min_length=1, max_length=512
+    )
+
+    @field_validator("module4_base_url")
+    @classmethod
+    def validate_module4_url(cls, value: str) -> str:
+        from backlog_service.module4_client import trusted_base_url
+
+        return trusted_base_url(value)
+
+    @model_validator(mode="after")
+    def module4_configured(self) -> "Settings":
+        if self.module4_enabled and (not self.module4_username or not self.module4_password):
+            raise ValueError("Module4 requires private Basic credentials")
+        if self.module4_username and ":" in self.module4_username.get_secret_value():
+            raise ValueError("Invalid Module4 username")
+        for credential in (self.module4_username, self.module4_password):
+            if credential and any(
+                ord(char) < 32 or ord(char) == 127 for char in credential.get_secret_value()
+            ):
+                raise ValueError("Invalid Module4 credentials")
+        return self
+
     module6_enabled: bool = False
     module6_endpoint: str = "https://software6-bff-2-cnbqhhgdcndzgwdx.chilecentral-01.azurewebsites.net/api/integrations/notifications"
     module6_key: SecretStr | None = Field(default=None, repr=False, min_length=1, max_length=512)

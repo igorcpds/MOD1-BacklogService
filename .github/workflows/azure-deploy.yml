@@ -95,6 +95,10 @@ jobs:
           IMAGE_REFERENCE: ${{ steps.image.outputs.reference }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           MODULE6_KEY: ${{ secrets.MODULE6_KEY }}
+          MODULE4_ENABLED: ${{ vars.MODULE4_ENABLED }}
+          MODULE4_BASE_URL: ${{ vars.MODULE4_BASE_URL }}
+          MODULE4_USERNAME: ${{ vars.MODULE4_USERNAME }}
+          MODULE4_PASSWORD: ${{ secrets.MODULE4_PASSWORD }}
           AUTH_API_URL: ${{ vars.AUTH_API_URL }}
           PROJECTS_API_URL: ${{ vars.PROJECTS_API_URL }}
         shell: bash

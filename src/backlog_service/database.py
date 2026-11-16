@@ -89,3 +89,4 @@ def migrate_schema(engine: Engine, schema: str) -> None:
         Base.metadata.tables["backlog.module6_notification_outbox"].create(
             connection, checkfirst=True
         )
+        Base.metadata.tables["backlog.module4_reviews"].create(connection, checkfirst=True)

@@ -1,3 +1,8 @@
+> Registro da proposta anterior de ingresso de eventos. A integração atual usa
+> a API síncrona real do Módulo 4 e está documentada em
+> [module4-client.md](module4-client.md). Este ingresso permanece desabilitado;
+> as pendências históricas abaixo não descrevem o aceite atual de US096.
+
 # Proposta local de eventos de revisão de código
 
 Este é um adaptador preparado e testado localmente. O contrato do produtor de

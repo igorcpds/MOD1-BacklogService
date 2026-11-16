@@ -44,6 +44,9 @@ def build_runtime_patch(
     enable_notifications=False,
     resend_from="",
     model="gemini-3.5-flash-lite",
+    enable_module4=False,
+    module4_base_url="https://revisor-codigo-ia-gio-ach9dbg3g9ekazf3.chilecentral-01.azurewebsites.net",
+    module4_username="revisor",
 ):
     if app["properties"]["configuration"].get("activeRevisionsMode") != "Single":
         raise ValueError("Expected existing single-revision traffic mode")
@@ -55,6 +58,19 @@ def build_runtime_patch(
         raise ValueError("Expected immutable image from the service's configured registry")
     if enable_notifications and service != "backlog":
         raise ValueError("Only Backlog has an agreed Module 6 source")
+    if enable_module4:
+        if service != "backlog":
+            raise ValueError("Module 4 integration belongs only to Backlog")
+        if module4_base_url.rstrip("/") != (
+            "https://revisor-codigo-ia-gio-ach9dbg3g9ekazf3.chilecentral-01.azurewebsites.net"
+        ):
+            raise ValueError("Use the official Module 4 deployment origin")
+        if (
+            not module4_username
+            or len(module4_username) > 128
+            or any(ord(char) < 33 or ord(char) > 126 or char == ":" for char in module4_username)
+        ):
+            raise ValueError("Invalid Module 4 Basic username")
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}", model):
         raise ValueError("Invalid Gemini model")
     template = copy.deepcopy(app["properties"]["template"])
@@ -107,6 +123,19 @@ def build_runtime_patch(
             "value": "false",
         }
         env["CODE_REVIEW_ENABLED"] = {"name": "CODE_REVIEW_ENABLED", "value": "false"}
+        env["MODULE4_ENABLED"] = {
+            "name": "MODULE4_ENABLED",
+            "value": "true" if enable_module4 else "false",
+        }
+        if enable_module4:
+            env["MODULE4_BASE_URL"] = {
+                "name": "MODULE4_BASE_URL",
+                "value": module4_base_url.rstrip("/"),
+            }
+            env["MODULE4_USERNAME"] = {"name": "MODULE4_USERNAME", "value": module4_username}
+            env["MODULE4_PASSWORD"] = {"name": "MODULE4_PASSWORD", "secretRef": "module4-password"}
+        else:
+            env.pop("MODULE4_PASSWORD", None)
     api["image"] = image
     if enable_notifications:
         env["MODULE6_SOURCE"] = {"name": "MODULE6_SOURCE", "value": "backlog"}
@@ -184,16 +213,25 @@ def main():
     url = resource + "?api-version=2025-01-01"
     before = azure("rest", "--method", "get", "--url", url, "--output", "json")
     image = os.environ["IMAGE_REFERENCE"]
+    module4_flag = (os.environ.get("MODULE4_ENABLED") or "false").lower()
+    if module4_flag not in {"true", "false"}:
+        raise ValueError("Module 4 flag must be explicit true or false")
     options = {
         "service": service,
         "enable_notifications": service == "backlog",
         "resend_from": os.environ.get("RESEND_FROM", ""),
         "model": os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+        "enable_module4": module4_flag == "true",
+        "module4_base_url": os.environ.get("MODULE4_BASE_URL")
+        or ("https://revisor-codigo-ia-gio-ach9dbg3g9ekazf3.chilecentral-01.azurewebsites.net"),
+        "module4_username": os.environ.get("MODULE4_USERNAME") or "revisor",
     }
     build_runtime_patch(before, image, **options)
     updates = {"gemini-api-key": os.environ["GEMINI_API_KEY"]}
     if service == "backlog":
         updates["module6-key"] = os.environ["MODULE6_KEY"]
+    if options["enable_module4"]:
+        updates["module4-password"] = os.environ.get("MODULE4_PASSWORD", "")
     existing = azure(
         "rest",
         "--method",

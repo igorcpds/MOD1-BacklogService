@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — preparação local, 2026-11-16
+
+- Revisões síncronas do Módulo 4 por item, com histórico local, Basic privado,
+  revalidação online de acesso, controle de versão e idempotência sem reenvio.
+- Somente uma análise válida de item `todo` inicia `in_progress`; conclusão manual.
+- Tabela aditiva `module4_reviews`, migração explícita, configuração desabilitada
+  por padrão e integração com histórico/captura M6 existentes.
+- Testes locais de HTTP real controlado, falhas, concorrência e PostgreSQL
+  descartável. Esta entrada não declara deploy ou aceite de produção.
+- [Contrato e operação](docs/module4-client.md).
+
 ## 0.5.0 — 2026-11-15
 
 Publicada em produção. [Commit, deploy e evidências](docs/final-delivery.md).

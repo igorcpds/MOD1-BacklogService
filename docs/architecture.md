@@ -88,3 +88,15 @@ a outbox externa no schema próprio. `module6_client.py` implementa o transporte
 origem do UUID; a reserva e a atualização do resultado têm transações curtas,
 fora do POST. A API não precisa acessar o receptor para atender uma operação.
 Veja o [contrato e a operação do Módulo 6](module6-notifications.md).
+
+## Revisões síncronas do Módulo 4
+
+`module4_domain.py` valida entrada e resultado sem HTTP ou persistência;
+`module4_service.py` coordena análise, idempotência, autorização atual e
+mudança de status por portas. `module4_repository.py` encapsula SQL e
+transações no schema próprio. `module4_client.py` implementa Basic dedicado,
+origem restrita, limites e prazo sem retry. `module4_routes.py` só adapta
+HTTP e `dependencies.py` injeta a revalidação online e credenciais privadas.
+O POST externo não mantém transação nem lease de escrita. A passagem real de
+`todo` para `in_progress` usa `ItemRepository.save_item`, histórico e captura
+M6 existentes; `done` permanece uma decisão manual. Veja o [contrato](module4-client.md).

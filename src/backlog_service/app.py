@@ -22,6 +22,9 @@ from backlog_service.gemini_adapter import GeminiProposalProvider
 from backlog_service.identity_status import IdentityStatusClient
 from backlog_service.item_routes import router as item_router
 from backlog_service.item_service import WriteControl
+from backlog_service.module4_client import Module4Client
+from backlog_service.module4_routes import router as module4_router
+from backlog_service.module4_service import ReviewProvider
 from backlog_service.project_access import ProjectAccess, ProjectsUnavailable, ProjectUnavailable
 from backlog_service.recommendation_routes import router as recommendation_router
 from backlog_service.recommendation_service import ProposalProvider
@@ -38,6 +41,7 @@ def create_app(
     identity_status: IdentityStatusClient | None = None,
     write_control: WriteControl | None = None,
     ai_provider: ProposalProvider | None = None,
+    module4_provider: ReviewProvider | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
     engine = create_database_engine(settings)
@@ -65,6 +69,15 @@ def create_app(
         else HTTPProposalProvider(client, settings)
     )
     app.state.settings = settings
+    app.state.module4_provider = module4_provider or (
+        Module4Client(
+            settings.module4_base_url,
+            settings.module4_username.get_secret_value(),
+            settings.module4_password.get_secret_value(),
+        )
+        if settings.module4_enabled and settings.module4_username and settings.module4_password
+        else None
+    )
     app.state.identity_status = identity_status or IdentityStatusClient(
         client, settings.auth_api_base_url
     )
@@ -125,6 +138,7 @@ def create_app(
         )
 
     app.include_router(review_router)
+    app.include_router(module4_router)
     app.include_router(recommendation_router)
     app.include_router(item_router)
     app.include_router(router)

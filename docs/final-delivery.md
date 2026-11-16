@@ -1,3 +1,48 @@
+# Backlog 0.6.0 — Code Review, 16/11/2026
+
+O Módulo 4 está integrado pela aplicação, com histórico por item e mudança de
+status aprovada. A US096 compõe agora as 100 US implementadas do Módulo 1.
+[Matriz e limites](https://github.com/Ckenz0/MOD1-WebFrontend/blob/main/docs/backlog-status.md).
+O segredo Basic fica no servidor; o contrato antigo de eventos continua
+desabilitado. [Contrato e operação](module4-client.md).
+
+## Aceite do Módulo 4 — 16/11/2026
+
+A regra aprovada foi implementada e validada: uma análise válida inicia somente
+itens a fazer; trabalho em andamento/concluído permanece como está e conclusão
+é manual. Os registros são restritos ao projeto/item, persistidos antes do POST
+e recuperáveis após reinício. Repetir o UUID com conteúdo igual não chama o
+provedor; conteúdo diferente conflita. Falhas, versão ou acesso alterados não
+concluem itens nem provocam retry automático. O ingresso legado de eventos
+permanece desabilitado e separado da API síncrona real do Módulo 4.
+
+- Backlog: **491 testes aprovados**, incluindo migração aditiva e concorrência
+  em PostgreSQL descartável local. Ruff, formato e mypy passaram.
+- Frontend: **187 testes executados, 185 aprovados e 2 opt-ins ignorados**,
+  usando as três APIs temporárias. Os ignorados são Resend/Gemini reais, já
+  validados na entrega anterior e não repetidos por esta alteração.
+- O aceite controlado de navegador exercitou sucesso, Basic dedicado, texto
+  seguro, replay, reinício e resposta incerta sem alteração do item. A revisão
+  independente encontrou e acompanhou as correções de recuperação após 409,
+  avisos entre páginas e indisponibilidade JWKS; não restaram achados materiais.
+- Uma rodada de aceite com o serviço M4 real passou: análise estática de código
+  fictício, **HTTP201**, um POST nessa rodada, transição `todo→in_progress`,
+  persistência após reinício e replay sem segundo POST. IA não foi solicitada;
+  não se infere que testes do código foram executados. O resultado informou
+  `testes_executados=false`. Não houve comentário em PR nem criação/alteração de
+  entidade de negócio de produção por esse teste.
+- O segredo Basic é exclusivo da API do Backlog. O patch de publicação preserva
+  CORS, JWT, Gemini e M6 e não repassa essa senha ao worker de notificações.
+  A tabela própria foi preparada de forma aditiva, após backup validado,
+  com SELECT/INSERT/UPDATE para runtime e sem acesso a outros schemas.
+
+O histórico global do provedor não é disponibilizado aos usuários do módulo.
+Respostas e Markdown são exibidos como texto; novo envio após resultado
+desconhecido exige ação explícita e indicação de possível duplicidade.
+
+
+## Histórico — publicação de 15/11/2026
+
 # Entrega de Backlog — 15/11/2026
 
 A versão `0.5.0` está publicada na Azure. Este registro descreve o estado

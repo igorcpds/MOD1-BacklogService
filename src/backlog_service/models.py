@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -125,3 +125,18 @@ class NotificationDeliveryRecord(Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(80), nullable=True)
     last_http_status: Mapped[int | None] = mapped_column(nullable=True)
+
+
+class Module4ReviewRecord(Base):
+    __tablename__ = "module4_reviews"
+    __table_args__ = (
+        UniqueConstraint("project_id", "item_id", "request_id", name="uq_module4_item_request"),
+        {"schema": "backlog"},
+    )
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, index=True)
+    item_id: Mapped[UUID] = mapped_column(Uuid, index=True)
+    request_id: Mapped[UUID] = mapped_column(Uuid)
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload_json: Mapped[str] = mapped_column(Text)

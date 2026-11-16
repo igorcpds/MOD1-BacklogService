@@ -71,7 +71,8 @@ def test_layer_does_not_import_forbidden_dependencies(module, forbidden):
 
 
 @pytest.mark.parametrize(
-    "module", ["item_service", "service", "recommendation_service", "review_service"]
+    "module",
+    ["item_service", "service", "recommendation_service", "review_service", "module4_service"],
 )
 def test_application_services_do_not_access_orm_session(module):
     tree = ast.parse((SOURCE / f"{module}.py").read_text(encoding="utf-8"))
@@ -128,10 +129,21 @@ def test_gemini_remains_infrastructure_and_http_client_disables_proxies():
     )
 
 
-@pytest.mark.parametrize("module", ["item_routes", "recommendation_routes", "review_routes"])
+@pytest.mark.parametrize(
+    "module", ["item_routes", "recommendation_routes", "review_routes", "module4_routes"]
+)
 def test_expanded_http_adapter_keeps_persistence_out(module):
     tree = ast.parse((SOURCE / f"{module}.py").read_text(encoding="utf-8"))
     assert not any(
         name.startswith(("sqlalchemy", "backlog_service.models", "backlog_service.item_repository"))
         for name in imported_modules(tree)
     )
+
+
+def test_module4_domain_is_pure_and_client_has_no_api_or_database_dependencies():
+    for module, forbidden in [
+        ("module4_domain", ("fastapi", "sqlalchemy", "httpx", "backlog_service.models")),
+        ("module4_client", ("fastapi", "sqlalchemy", "backlog_service.dependencies")),
+    ]:
+        tree = ast.parse((SOURCE / f"{module}.py").read_text(encoding="utf-8"))
+        assert not any(name.startswith(forbidden) for name in imported_modules(tree))

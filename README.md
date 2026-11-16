@@ -1,6 +1,6 @@
 # MOD1 Backlog Service
 
-## Backlog expandido — 0.5.0 publicado em 15/11/2026
+## Backlog 0.6.0 — Code Review, 16/11/2026
 
 Integração publicada com Projetos 0.6.0 e Identidade 0.5.0: cada operação valida a sessão online e
 consulta `/projects/{id}/access/v2` com o mesmo Bearer. Papéis personalizados e
@@ -13,9 +13,17 @@ instalações; produção já foi preparada e publicada.
 Organização do serviço, dependências e fluxos de autorização:
 [arquitetura multicamadas](docs/architecture.md).
 
-Serviço `0.5.0` de histórias por projeto: registrar necessidades e critérios de aceite,
+Serviço `0.6.0` de histórias por projeto: registrar necessidades e critérios de aceite,
 priorizar entregas e acompanhar o progresso. O usuário entra pelo serviço de
 identidade e acessa apenas projetos autorizados pelo serviço de projetos.
+
+## Revisões de código por item
+
+A integração com o Módulo 4 chama a API real pelo backend com credenciais
+privadas. Uma análise válida inicia somente itens `todo`; não conclui trabalho
+automaticamente. O histórico é restrito ao item/projeto e pedidos incertos não
+são reenviados. Configure o segredo no backend e execute a migração aditiva
+antes de habilitar `MODULE4_ENABLED`. [Contrato e operação](docs/module4-client.md).
 
 ## Preparar
 

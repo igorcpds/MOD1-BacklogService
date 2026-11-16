@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from backlog_service.database import check_readiness
 from backlog_service.domain import ProjectContext, ReviewPrincipal
+from backlog_service.module4_repository import Module4Repository
+from backlog_service.module4_service import Module4Service
 from backlog_service.project_access import (
     ProjectsUnavailable,
     ProjectUnavailable,
@@ -122,3 +124,34 @@ def review_service(request: Request, gate: ReviewGate, items: Service) -> Review
 
 
 ReviewEvents = Annotated[ReviewService, Depends(review_service)]
+
+
+def module4_service(
+    request: Request,
+    context: Context,
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> Iterator[Module4Service]:
+    def fresh_context() -> ProjectContext:
+        # Always revalidate the online session after long IO, even in legacy auth mode.
+        try:
+            request.app.state.verifier.verify(principal.token)
+            request.app.state.identity_status.check(principal.token, principal.actor_id)
+            current: ProjectContext = request.app.state.project_access.context(
+                context.project_id, principal.actor_id, principal.token
+            )
+        except SigningKeysUnavailable:
+            raise HTTPException(503, "Service temporarily unavailable") from None
+        return current
+
+    with Session(request.app.state.engine, expire_on_commit=False) as session:
+        yield Module4Service(
+            Module4Repository(session),
+            request.app.state.module4_provider,
+            fresh_context,
+            enabled=request.app.state.settings.module4_enabled,
+            control=request.app.state.write_control
+            or ProjectWriteControl(request.app.state.project_access, principal.token),
+        )
+
+
+CodeReviews = Annotated[Module4Service, Depends(module4_service)]

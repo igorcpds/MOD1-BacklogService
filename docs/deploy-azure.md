@@ -1,6 +1,8 @@
 # Backlog na Azure
 
-O backlog roda em Container Apps Consumption, separado de identidade e projetos, mantendo persistência no Neon. Use o [passo a passo completo](https://github.com/Ckenz0/MOD1-IdentityService/blob/main/docs/deploy-azure.md) para a infraestrutura compartilhada e a ordem de implantação.
+A migração de 23/11/2026 recupera o backup de 16/11; registros posteriores não estão incluídos. Os endpoints permanecem iguais. [Banco e recuperação](https://github.com/Ckenz0/MOD1-IdentityService/blob/main/docs/database-azure-postgresql.md).
+
+O backlog roda em Container Apps Consumption, separado de identidade e projetos, com persistência no PostgreSQL gerenciado na Azure. Use o [passo a passo completo](https://github.com/Ckenz0/MOD1-IdentityService/blob/main/docs/deploy-azure.md) para a infraestrutura compartilhada e a ordem de implantação.
 
 ## Parâmetros deste serviço
 
@@ -9,7 +11,7 @@ O backlog roda em Container Apps Consumption, separado de identidade e projetos,
 | Imagem | REGISTRY.azurecr.io/backlog@sha256:DIGEST |
 | Processo | backlog_service.app:create_app, factory, 0.0.0.0:8002 |
 | Recursos iniciais | 0,25 vCPU/0,5 GiB; zero a uma réplica; validar capacidade real |
-| Schema Neon | backlog |
+| Schema PostgreSQL Azure | backlog |
 | Segredo versionado | backlog-database-url |
 | JWT_ISSUER | URL HTTPS estável da identidade |
 | JWT_AUDIENCE | engenharia-software-api |

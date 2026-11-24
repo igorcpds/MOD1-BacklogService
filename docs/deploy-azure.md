@@ -19,7 +19,7 @@ O backlog roda em Container Apps Consumption, separado de identidade e projetos,
 | PROJECTS_API_BASE_URL | URL HTTPS estável de projetos |
 | CORS_ORIGINS | Array JSON com a origem HTTPS estável do frontend |
 
-O runtime recebe USAGE e SELECT/INSERT/UPDATE em suas tabelas, sem acesso aos schemas dos outros serviços. Prepare tabelas/permissões administrativamente conforme [database-neon.md](database-neon.md), sem executar DDL no startup. O DSN usa `verify-full` e `sslrootcert=/etc/ssl/certs/ca-certificates.crt`. O Dockerfile já exige o bundle de CAs na imagem.
+O runtime recebe USAGE e SELECT/INSERT/UPDATE em suas tabelas, sem acesso aos schemas dos outros serviços. Prepare tabelas/permissões administrativamente conforme o [guia do PostgreSQL Azure](https://github.com/Ckenz0/MOD1-IdentityService/blob/main/docs/database-azure-postgresql.md), sem executar DDL no startup. O DSN usa `verify-full` e `sslrootcert=/etc/ssl/certs/ca-certificates.crt`. O Dockerfile já exige o bundle de CAs na imagem.
 
 ## Publicação
 

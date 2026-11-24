@@ -180,3 +180,10 @@ Na configuração de produ??o preparada pelo workflow, o worker do Backlog usa
 um container separado dentro do mesmo Container App, com réplica mínima um.
 O processo não recebe ingress, compartilha a imagem da API e acessa somente
 o schema do Backlog. Veja [operação Azure](deploy-azure.md).
+
+
+## Consumo durante ociosidade
+
+O worker `run` continua consultando eventos a cada dez segundos por padrão. A contagem completa da fila e o relatório JSON ocorrem na primeira consulta, após um lote com tentativas de envio e a cada cinco minutos sem atividade. O intervalo usa relógio monotônico; cada relatório inicia um novo período. Assim, a ausência de logs a cada dez segundos é esperada e não indica que o worker parou. Confira também o estado e os reinícios do container.
+
+Os comandos `status` e `dispatch` continuam mostrando o estado imediatamente. A busca de eventos, recuperação de leases, política de retry e persistência não mudam. Em ociosidade, as contagens e os logs periódicos caem de 8.640 para aproximadamente 288 por dia por worker; isso não representa a mesma redução de todas as consultas nem do custo fixo do PostgreSQL Azure.

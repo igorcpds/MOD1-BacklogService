@@ -1,5 +1,9 @@
 # Banco do backlog
 
+O procedimento Neon abaixo é histórico. A produção usa PostgreSQL exclusivo na Azure desde 23/11/2026,
+recuperado do backup de 16/11. Consulte o [guia atual do banco](https://github.com/Ckenz0/MOD1-IdentityService/blob/main/docs/database-azure-postgresql.md).
+Preserve os UUIDs da cópia e use somente o DSN Azure privado nos deploys atuais.
+
 Schema `backlog`, tabela `backlog.stories`, conta `mod1_backlog_runtime`.
 Projeto/autor são referências lógicas, validadas pelas APIs; sem FK entre módulos.
 

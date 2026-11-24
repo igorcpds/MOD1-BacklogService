@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 — 2026-11-24
+
+- Reduz contagens completas da fila e logs ociosos do worker M6 para cada cinco minutos.
+- Preserva a consulta de eventos a cada dez segundos, os relatórios após tentativas de envio e os comandos operacionais.
+- Testes com SQL real verificam ociosidade, entrega na próxima consulta e ausência de duplicação.
+
 ## 0.6.0 — preparação local, 2026-11-16
 
 - Revisões síncronas do Módulo 4 por item, com histórico local, Basic privado,
